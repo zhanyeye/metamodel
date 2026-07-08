@@ -1,0 +1,297 @@
+# ============================================
+# 元元模型（M3层）- 基础类型系统
+# 版本: 1.0.0
+# 描述: 定义元模型可用的基础字段类型和模型类型
+# ============================================
+metaMetaTypes:
+  # ========== 字段基类 ==========
+  - fieldType: "Field"
+    version: 1.0.0
+    description: "所有字段类型的基类"
+    infos:
+      - name: name
+        type: string
+        required: true
+        description: "字段名"
+        pattern: "^[a-z][a-zA-Z0-9_]*$"
+
+      - name: required
+        type: boolean
+        required: false
+        default: false
+        description: "是否必填"
+
+      - name: description
+        type: string
+        required: false
+        description: "字段描述"
+        maxLength: 500
+
+      - name: label
+        type: string
+        required: false
+        description: "显示标签"
+
+      - name: placeholder
+        type: string
+        required: false
+        description: "输入提示"
+
+      - name: help
+        type: string
+        required: false
+        description: "帮助文本"
+
+      - name: dependsOn
+        type: string
+        required: false
+        description: "依赖的其他字段"
+
+      - name: generated
+        type: boolean
+        required: false
+        default: false
+        description: "是否自动生成"
+
+  # ========== 字符串类型 ==========
+  - fieldType: "StringField"
+    extends: "Field"
+    description: "字符串类型字段"
+    valueType: string
+    infos:
+      - name: default
+        type: string
+        required: false
+        description: "默认值"
+
+      - name: pattern
+        type: string
+        required: false
+        description: "正则表达式验证"
+
+      - name: minLength
+        type: integer
+        required: false
+        minimum: 0
+        description: "最小长度"
+
+      - name: maxLength
+        type: integer
+        required: false
+        minimum: 1
+        description: "最大长度"
+
+      - name: format
+        type: enum
+        required: false
+        enum: ["singleline", "multiline"]
+        default: "singleline"
+        description: "输入格式"
+
+      - name: unique
+        type: boolean
+        required: false
+        default: false
+        description: "是否唯一"
+
+      - name: example
+        type: string
+        required: false
+        description: "示例值"
+
+  # ========== 整数类型 ==========
+  - fieldType: "IntegerField"
+    extends: "Field"
+    description: "整数类型字段"
+    valueType: integer
+    infos:
+      - name: default
+        type: integer
+        required: false
+        description: "默认值"
+
+      - name: minimum
+        type: integer
+        required: false
+        description: "最小值"
+
+      - name: maximum
+        type: integer
+        required: false
+        description: "最大值"
+
+      - name: unit
+        type: string
+        required: false
+        description: "单位"
+
+      - name: example
+        type: integer
+        required: false
+        description: "示例值"
+
+  # ========== 数字类型（浮点数）==========
+  - fieldType: "NumberField"
+    extends: "Field"
+    description: "浮点数类型字段"
+    valueType: number
+    infos:
+      - name: default
+        type: number
+        required: false
+        description: "默认值"
+
+      - name: minimum
+        type: number
+        required: false
+        description: "最小值"
+
+      - name: maximum
+        type: number
+        required: false
+        description: "最大值"
+
+      - name: unit
+        type: string
+        required: false
+        description: "单位"
+
+      - name: example
+        type: number
+        required: false
+        description: "示例值"
+
+  # ========== 布尔类型 ==========
+  - fieldType: "BooleanField"
+    extends: "Field"
+    description: "布尔类型字段"
+    valueType: boolean
+    infos:
+      - name: default
+        type: boolean
+        required: false
+        description: "默认值"
+
+      - name: example
+        type: boolean
+        required: false
+        description: "示例值"
+
+  # ========== 枚举类型 ==========
+  - fieldType: "EnumField"
+    extends: "Field"
+    description: "枚举类型字段"
+    valueType: array
+    infos:
+      - name: multiple
+        type: boolean
+        required: false
+        default: false
+        description: "是否多选"
+
+      - name: default
+        type: string
+        required: false
+        description: "默认值（必须是enum中的值之一）"
+
+      - name: enum
+        type: array
+        required: true
+        description: "枚举值列表"
+
+      - name: options
+        type: array
+        required: false
+        description: "枚举值的显示名称列表，长度跟enum相同，顺序相同"
+
+      - name: example
+        type: string
+        required: false
+        description: "示例值"
+
+  # ========== ID类型 ==========
+  - fieldType: "IdField"
+    extends: "Field"
+    description: "全局唯一标识符字段"
+    valueType: string
+    infos:
+      - name: generated
+        type: boolean
+        required: false
+        default: true
+        description: "是否自动生成（默认自动生成）"
+
+      - name: template
+        type: string
+        required: false
+        default: "{modelType}.{name}"
+        description: "生成模板，支持占位符如 {topicId}"
+        example: "{modelType}.{name}"
+
+  # ========== 引用类型 ==========
+  - fieldType: "ReferenceField"
+    extends: "Field"
+    description: "引用类型字段（关联到其他元模型）"
+    valueType: string # 保存的是引用的Id
+    infos:
+      - name: refModelAllowed
+        type: array
+        required: true
+        description: "允许引用的元模型类型列表"
+
+      - name: example
+        type: string
+        required: false
+        description: "示例值"
+
+  # ========== 复杂类型 ==========
+  - fieldType: "ComplexType"
+    extends: "Field"
+    description: "复杂类型定义，用于嵌套结构"
+    valueType: map
+    infos:
+      - name: fields
+        type: array
+        required: true
+        description: "字段定义列表"
+        label: "字段列表"
+
+  # ========== 数组类型 ==========
+  - fieldType: "ArrayField"
+    extends: "Field"
+    description: "数组类型字段"
+    valueType: array
+    infos:
+      - name: items
+        type: Field
+        required: true  # 强制必须有 items
+        description: "数组元素的类型定义（在M2层定义）"
+        help: "必须定义数组元素的类型，可以是基础类型或对象类型"
+
+      - name: default
+        type: array
+        required: false
+        description: "默认值"
+
+      - name: minItems
+        type: integer
+        required: false
+        minimum: 0
+        description: "最小元素数"
+
+      - name: maxItems
+        type: integer
+        required: false
+        minimum: 1
+        description: "最大元素数"
+
+      - name: uniqueItems
+        type: boolean
+        required: false
+        default: false
+        description: "元素是否必须唯一"
+
+      - name: example
+        type: array
+        required: false
+        description: "示例值"

@@ -1,0 +1,136 @@
+# ============================================
+# Kafka Consumer 元模型 (KafkaConsumer)
+# 版本: 1.0.0
+# 描述: Kafka Consumer配置，关联到具体的服务
+# ============================================
+components:
+  topicConf:
+    type: ComplexType
+    fields:
+      - name: maxPollRecords
+        type: IntegerField
+        required: false
+        description: "该Topic的单次poll最大记录数"
+        minimum: 1
+        example: 500
+        label: "Max Poll Records"
+        unit: "条"
+        help: "覆盖全局配置"
+
+      - name: customParameters
+        type: StringField
+        required: false
+        description: "该Topic特有的Consumer参数"
+        format: multiline
+        example: |
+          fetch.min.bytes=1024
+        placeholder: |
+          fetch.min.bytes=1024
+          max.partition.fetch.bytes=2097152
+        label: "Topic自定义参数"
+        help: "每行格式: key=value"
+        maxLength: 2000
+
+  globalConf:
+    type: ComplexField
+    fields:
+      # ---------- 拉取配置 ----------
+      - name: maxPollRecords
+        type: IntegerField
+        required: false
+        description: "单次poll最大记录数（全局默认值）"
+        minimum: 1
+        default: 500
+        example: 1000
+        label: "Max Poll Records"
+        unit: "条"
+        help: "全局默认值，可在Topic级别覆盖"
+
+      - name: maxPollIntervalMs
+        type: IntegerField
+        required: false
+        description: "最大poll间隔（毫秒）"
+        minimum: 1
+        default: 300000
+        example: 600000
+        label: "Max Poll Interval"
+        unit: "ms"
+        help: "超过此时间未poll会被认为死亡，触发Rebalance"
+
+      - name: fetchMinBytes
+        type: IntegerField
+        required: false
+        description: "最小抓取字节数"
+        minimum: 1
+        default: 1
+        example: 1024
+        label: "Fetch Min Bytes"
+        unit: "bytes"
+        help: "broker等待凑够这么多字节才返回，增大可提升吞吐量"
+
+      - name: fetchMaxBytes
+        type: IntegerField
+        required: false
+        description: "最大抓取字节数"
+        minimum: 1
+        default: 52428800
+        example: 104857600
+        label: "Fetch Max Bytes"
+        unit: "bytes"
+
+      - name: fetchMaxWaitMs
+        type: IntegerField
+        required: false
+        description: "最大抓取等待时间（毫秒）"
+        minimum: 0
+        default: 500
+        example: 1000
+        label: "Fetch Max Wait"
+        unit: "ms"
+        help: "等待数据的最长时间，超时则返回已有数据"
+
+      - name: maxPartitionFetchBytes
+        type: IntegerField
+        required: false
+        description: "单分区最大抓取字节数"
+        default: 1048576
+        example: 2097152
+        label: "Max Partition Fetch Bytes"
+        unit: "bytes"
+        help: "每个分区返回的最大数据量"
+
+      # ---------- 超时配置 ----------
+      - name: requestTimeoutMs
+        type: IntegerField
+        required: false
+        description: "请求超时时间（毫秒）"
+        default: 30000
+        example: 60000
+        label: "Request Timeout"
+        unit: "ms"
+
+      - name: defaultApiTimeoutMs
+        type: IntegerField
+        required: false
+        description: "API操作默认超时（毫秒）"
+        default: 60000
+        example: 120000
+        label: "Default API Timeout"
+        unit: "ms"
+
+      # ---------- 自定义参数 ----------
+      - name: customParameters
+        type: StringField
+        required: false
+        description: "全局自定义参数"
+        format: multiline
+        example: |
+          partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor
+          exclude.internal.topics=true
+        placeholder: |
+          partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor
+          exclude.internal.topics=true
+          check.crcs=false
+        label: "自定义参数"
+        help: "每行格式: key=value，支持所有Consumer参数"
+        maxLength: 5000

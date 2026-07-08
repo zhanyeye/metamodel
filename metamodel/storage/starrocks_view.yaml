@@ -1,0 +1,180 @@
+# ============================================
+# StarRocks 视图元模型 (StarRocksView)
+# 版本: 1.0.0
+# 描述: StarRocks逻辑视图元模型
+# ============================================
+models:
+  - modelType: "StarRocksView"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "StarRocks逻辑视图元模型"
+
+    fields:
+      # ---------- 视图ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "StarRocksView.{database}.{name}"
+        description: "视图ID，自动生成"
+        label: "视图ID"
+        help: "格式: StarRocksView.{database}.{name}，自动生成"
+
+      # ---------- 视图名称（在数据库内唯一）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "视图名称（StarRocks中的实际名称）"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "bw_daily_unified"
+        label: "视图名称"
+        placeholder: "如 bw_daily_unified"
+        help: "StarRocks中的实际视图名"
+        unique: true  # 在database内唯一
+
+      # ---------- 所属数据库 ----------
+      - name: database
+        type: StringField
+        required: true
+        description: "所属数据库"
+        pattern: "^[a-zA-Z0-9_]+$"
+        example: "dwd_network"
+        label: "数据库"
+        placeholder: "如 dwd_network"
+        help: "视图所在的数据库"
+
+      # ---------- 视图描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "视图描述"
+        maxLength: 500
+        example: "统一带宽日视图，聚合设备和区域数据"
+        label: "描述"
+        placeholder: "请输入视图描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该视图用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该视图支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "该视图所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该视图所属的数据分层"
+
+      # ---------- 依赖的基表 ----------
+      - name: baseTables
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 100
+        description: "视图依赖的基表ID列表"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["StarRocksTable"]
+        example: ["StarRocksTable.dwd_network.bw_daily_by_device", "StarRocksTable.dwd_network.bw_daily_by_region"]
+        label: "基表"
+        help: "视图依赖的物理表"
+
+      # ---------- 视图定义 ----------
+      - name: definition
+        type: ComplexType
+        required: true
+        description: "视图定义"
+        label: "视图定义"
+        fields:
+          - name: sql
+            type: StringField
+            required: true
+            format: multiline
+            description: "创建视图的SQL语句（不含CREATE VIEW部分）"
+            example: |
+              SELECT 
+                device_id,
+                region,
+                ds,
+                total_bw
+              FROM (
+                SELECT device_id, NULL as region, ds, total_bw 
+                FROM dwd_network.bw_daily_by_device
+                UNION ALL
+                SELECT NULL as device_id, region, ds, total_bw 
+                FROM dwd_network.bw_daily_by_region
+              ) AS unified
+            label: "SQL定义"
+            placeholder: "输入视图的SQL定义"
+            help: "创建视图的SQL语句（不含CREATE VIEW部分）"
+            maxLength: 10000
+
+          - name: columns
+            type: ArrayField
+            required: false
+            description: "视图字段定义（当前无法从SQL中自动推导，需要手工配置，需与SQL一致）"
+            label: "字段定义"
+            minItems: 0
+            maxItems: 1000
+            items:
+              type: ComplexType
+              fields:
+                - name: name
+                  type: StringField
+                  required: true
+                  description: "字段名"
+                  pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                  example: "device_id"
+                  label: "字段名"
+                  placeholder: "如 device_id"
+                  help: "视图返回的字段名"
+                  maxLength: 100
+
+                - name: type
+                  type: StringField
+                  required: true
+                  description: "字段类型"
+                  example: "string"
+                  label: "字段类型"
+                  placeholder: "如 string"
+                  help: "StarRocks支持的数据类型"
+                  maxLength: 50
+
+                - name: comment
+                  type: StringField
+                  required: false
+                  description: "字段注释"
+                  example: "设备ID"
+                  label: "注释"
+                  placeholder: "字段说明"
+                  maxLength: 200
+            help: "视图返回的字段列表，需与SQL select的字段一致"
+
+      # ---------- 视图属性 ----------
+      - name: properties
+        type: StringField
+        required: false
+        description: "视图属性配置（如注释、字符集等）"
+        format: multiline
+        example: |
+          comment = "统一带宽日视图"
+          charset = "utf8"
+        placeholder: |
+          comment = "统一带宽日视图"
+          charset = "utf8"
+        label: "视图属性"
+        help: "每行一个 key=value 格式的属性，如 comment、charset 等"
+        maxLength: 5000

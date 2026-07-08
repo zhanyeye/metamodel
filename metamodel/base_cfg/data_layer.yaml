@@ -1,0 +1,62 @@
+# ============================================
+# 数据分层元模型 (DataLayer)
+# 版本: 1.0.0
+# 描述: 定义数据分层枚举，供其他元模型引用
+# ============================================
+models:
+  - modelType: "DataLayer"
+    version: 1.0.0
+    description: "数据分层定义"
+
+    fields:
+      # ---------- 分层ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "DataLayer.{code}"
+        description: "分层ID，自动生成"
+        label: "分层ID"
+        help: "格式: DataLayer.{code}，自动生成"
+
+      # ---------- 分层代码（唯一标识）----------
+      - name: code
+        type: StringField
+        required: true
+        description: "分层代码，用于程序中引用，全局唯一"
+        pattern: "^[A-Z0-9_]+$"
+        example: "ODS"
+        label: "分层代码"
+        placeholder: "如 ODS"
+        help: "程序中引用的代码，建议大写，如 ODS、DWD、DWS、ADS"
+        unique: true
+
+      # ---------- 分层名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        description: "分层名称"
+        example: "操作数据层"
+        label: "名称"
+        placeholder: "如 操作数据层"
+
+      # ---------- 分层描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "分层描述"
+        maxLength: 500
+        example: "原始数据接入层，保持与源系统一致"
+        label: "描述"
+        placeholder: "请输入分层描述"
+
+      # ---------- 分层顺序 ----------
+      - name: order
+        type: IntegerField
+        required: true
+        description: "分层顺序（数字越小越靠前）"
+        minimum: 1
+        example: 1
+        label: "顺序"
+        help: "数字越小越底层，如 ODS=1, DWD=2, DWS=3, ADS=4"
+      

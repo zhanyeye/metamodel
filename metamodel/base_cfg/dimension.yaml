@@ -1,0 +1,108 @@
+# ============================================
+# 维度元模型 (Dimension)
+# 版本: 1.0.0
+# 描述: 定义数据维度，供StarRocks等建模时引用
+# ============================================
+models:
+  - modelType: "Dimension"
+    version: 1.0.0
+    description: "数据维度定义"
+
+    fields:
+      # ---------- 维度ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Dimension.{code}"
+        description: "维度ID，自动生成"
+        label: "维度ID"
+        help: "格式: Dimension.{code}，自动生成"
+
+      # ---------- 维度代码（唯一标识）----------
+      - name: code
+        type: StringField
+        required: true
+        description: "维度代码，用于程序中引用，全局唯一"
+        pattern: "^[a-z][a-z0-9_-]*$"
+        example: "cell_id"
+        label: "维度代码"
+        placeholder: "如 cell_id"
+        help: "小写字母开头，如 province、city、cell_id"
+        unique: true
+
+      # ---------- 维度名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        description: "维度名称"
+        example: "小区"
+        label: "名称"
+        placeholder: "如 小区"
+
+      # ---------- 维度描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "维度描述"
+        maxLength: 500
+        example: "5G小区标识，用于定位网络覆盖区域"
+        label: "描述"
+        placeholder: "请输入维度描述"
+
+      # ---------- 数据类型 ----------
+      - name: dataType
+        type: EnumField
+        required: true
+        description: "维度数据类型"
+        enum:
+          - STRING
+          - INT
+          - BIGINT
+          - DATE
+          - DATETIME
+          - BOOLEAN
+        default: "STRING"
+        example: "STRING"
+        label: "数据类型"
+        options:
+          - "字符串"
+          - "整数"
+          - "长整数"
+          - "日期"
+          - "日期时间"
+          - "布尔值"
+        help: "维度字段在表中的数据类型"
+
+      # ---------- 所属业务领域 ----------
+      - name: domain
+        type: ReferenceField
+        required: false
+        description: "所属业务领域"
+        refModelAllowed: ["Domain"]
+        example: "Domain.network"
+        label: "所属领域"
+        placeholder: "如 Domain.network"
+        help: "选择该维度所属的业务领域"
+
+      # ---------- 是否为层级维度 ----------
+      - name: hierarchical
+        type: BooleanField
+        required: false
+        default: false
+        description: "是否为层级维度"
+        example: true
+        label: "层级维度"
+        help: "是否包含上下级关系，如省→市→区县"
+
+      # ---------- 父维度 ----------
+      - name: parentDimId
+        type: ReferenceField
+        required: false
+        description: "父维度ID（用于层级维度）"
+        refModelAllowed: ["Dimension"]
+        example: "Dimension.province"
+        label: "父维度"
+        placeholder: "如 Dimension.province"
+        dependsOn: "{hierarchical}==true"
+        help: "层级维度的上一级维度"

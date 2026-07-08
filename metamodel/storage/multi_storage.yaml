@@ -1,0 +1,121 @@
+# ============================================
+# 多级存储元模型 (MultiStorage)
+# 版本: 1.0.0
+# 描述: 将不同存储系统的数据包装成统一的多级存储，读写只需指定多级存储ID
+#       当前不支持冷热交换。读数据，只从最高优先级存储读；写数据，同时写入多种存储
+#       不做多层存储间的一致性检查
+# ============================================
+models:
+  - modelType: "MultiStorage"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "多级存储元模型，将Redis、StarRocks、HDFS数据包装成统一存储"
+
+    fields:
+      # ---------- 多级存储ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "MultiStorage.{name}"
+        description: "多级存储ID，自动生成"
+        label: "多级存储ID"
+        help: "格式: MultiStorage.{name}，自动生成"
+
+      # ---------- 多级存储名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "多级存储名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-daily"
+        label: "名称"
+        placeholder: "如 bw-daily"
+        help: "多级存储的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 业务描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "业务描述"
+        maxLength: 500
+        example: "带宽日汇总数据，同时存储在Redis(缓存)、StarRocks(分析)、HDFS(归档)"
+        label: "描述"
+        placeholder: "请输入业务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该多级存储用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-query", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该多级存储支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "该多级存储所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该多级存储所属的数据分层"
+
+      # ---------- 存储层级定义 ----------
+      - name: storageLevels
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 10
+        description: "存储层级列表，按访问频率从高到低排序"
+        label: "存储层级"
+        items:
+          type: ComplexType
+          fields:
+            - name: level
+              type: IntegerField
+              required: true
+              description: "层级，1为最高优先级"
+              minimum: 1
+              maximum: 10
+              example: 1
+              label: "层级"
+              help: "1为最高优先级（最快存储），数字越大优先级越低"
+
+            - name: storageType
+              type: EnumField
+              required: true
+              description: "存储类型"
+              enum:
+                - "REDIS"
+                - "STARROCKS"
+                - "ICEBERG"
+              example: "REDIS"
+              label: "存储类型"
+              help: "选择存储系统类型"
+
+            - name: storageId
+              type: ReferenceField
+              required: true
+              description: "对应存储系统的数据ID"
+              label: "存储ID"
+              placeholder: "如 Redis.user-profile"
+              refModelAllowed: ["Redis", "StarRocksTable", "IcebergTable"]  # 根据storageType动态决定引用的模型
+              help: "引用对应存储系统的数据定义ID"
+
+            - name: description
+              type: StringField
+              required: false
+              description: "层级描述"
+              example: "热缓存层，毫秒级响应"
+              label: "层级描述"
+              placeholder: "如 热缓存层，毫秒级响应"
+              maxLength: 200

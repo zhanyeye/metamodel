@@ -1,0 +1,456 @@
+# starrocks-dw.yaml
+# StarRocks DW元模型
+# 版本: 1.0.0
+# 描述: StarRocks DW元模型，包含维度树定义和时间粒度，自动生成各节点表
+# StarRocksDW 设计逻辑：
+# 1. 维度树（dimensionTree）：定义维度层级关系，每个节点代表一个维度
+#    - 节点可以控制是否生成表（generateTable）
+#    - 节点可以自定义表名（tableName）或使用自动命名
+#    - 节点可以定义分桶策略（bucketBy/bucketCount）
+#
+# 2. 时间粒度（timeGranularities）：引用已定义的时间粒度
+#    - 与维度组合正交，每个维度节点会为每个时间粒度生成一张表
+#    - 可覆盖默认的保留时间（retention）
+#
+# 3. 指标列表（metrics）：这一组表共有的业务指标
+#    - 只定义指标名称和类型，不定义计算逻辑
+#    - 计算逻辑由Flink SQL等计算任务实现
+#
+# 4. 表生成（tables）：系统自动生成的表列表
+#    - 维度节点 × 时间粒度 = 表
+#    - 表名按命名规则自动生成，也可在节点自定义
+#    - 包含分区、分桶、保留时间等信息
+#
+# 5. 命名规则（namingRule）：表名生成模板
+#    - pattern: 如 "x_{granularity}_{node_alias}_xx"
+models:
+  - modelType: "StarRocksDW"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "StarRocks DW元模型，包含维度树定义和时间粒度，自动生成各节点表"
+
+    fields:
+      # ---------- DW ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "StarRocksDW.{name}"
+        description: "DW ID，自动生成"
+        label: "DW ID"
+        help: "格式: StarRocksDW.{name}，自动生成"
+
+      # ---------- DW名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "DW名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "network-coverage"
+        label: "DW名称"
+        placeholder: "如 network-coverage"
+        help: "DW的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- DW描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "DW描述"
+        maxLength: 500
+        example: "基于维度树生成的带宽分析表集合"
+        label: "描述"
+        placeholder: "请输入DW描述"
+
+      # ---------- 所属业务领域 ----------
+      - name: domain
+        type: ReferenceField
+        required: false
+        description: "所属业务领域"
+        refModelAllowed: ["Domain"]
+        example: "Domain.network"
+        label: "领域"
+        placeholder: "如 Domain.network"
+        help: "选择该DW所属的业务领域"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该DW用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该DW支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "该DW所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该DW所属的数据分层"
+
+      # ---------- 责任人 ----------
+      - name: owner
+        type: StringField
+        required: true
+        description: "责任人/团队"
+        example: "team-network"
+        label: "责任人"
+        placeholder: "如 team-network"
+        maxLength: 100
+
+      # ---------- 时间粒度列表 ----------
+      - name: timeGranularities
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 10
+        description: "时间粒度列表（引用已定义的时间粒度）"
+        label: "时间粒度"
+        items:
+          type: ComplexType
+          fields:
+            - name: granularityId
+              type: ReferenceField
+              required: true
+              description: "时间粒度ID"
+              refModelAllowed: ["TimeGranularity"]
+              example: "TimeGranularity.DAY"
+              label: "时间粒度"
+              placeholder: "如 TimeGranularity.DAY"
+              help: "选择时间粒度定义"
+
+            - name: retention
+              label: "保留时间"
+              description: "覆盖默认保留时间"
+              required: false
+              default: "30d"
+              help: "不填则使用粒度定义的默认值"
+              $ref: "duration.yaml#/components/duration"
+
+      # ---------- 维度树定义 ----------
+      - name: dimensionTree
+        required: true
+        description: "维度树定义"
+        label: "维度树"
+        $ref: "#/components/TreeNode"
+
+      # ---------- 指标列表 ----------
+      - name: metrics
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 100
+        description: "指标列表（这一组表共有的指标）"
+        label: "指标列表"
+        items:
+          type: ComplexType
+          fields:
+            - name: name
+              type: StringField
+              required: true
+              description: "指标名（字段名）"
+              pattern: "^[a-z][a-z0-9_]*$"
+              example: "total_bw"
+              label: "指标名"
+              placeholder: "如 total_bw"
+              help: "小写字母开头"
+
+            - name: displayName
+              type: StringField
+              required: false
+              description: "显示名称"
+              example: "总带宽"
+              label: "显示名称"
+              placeholder: "如 总带宽"
+              maxLength: 100
+
+            - name: dataType
+              type: EnumField
+              required: true
+              description: "数据类型"
+              enum:
+                - "BIGINT"
+                - "DOUBLE"
+                - "DECIMAL"
+                - "INT"
+                - "STRING"
+              example: "BIGINT"
+              label: "数据类型"
+
+            - name: description
+              type: StringField
+              required: false
+              description: "指标描述"
+              maxLength: 200
+              example: "总带宽使用量"
+              label: "描述"
+              placeholder: "请输入指标描述"
+
+      # ---------- 表名前缀 ----------
+      - name: namePrefix
+        type: StringField
+        required: true
+        description: "表名前缀，用来表示记录了什么数据"
+        pattern: "^[a-zA-Z0-9_]+$"
+        example: "bw"
+        label: "表名前缀"
+        placeholder: "如 bw"
+        help: "自动生成表名：前缀_维度别名列表_时间粒度，例如bw_city_cell_15min"
+
+      # ---------- 数据库名 ----------
+      - name: database
+        type: StringField
+        required: true
+        description: "StarRocks数据库名"
+        pattern: "^[a-zA-Z0-9_]+$"
+        example: "dwd_network"
+        label: "数据库"
+        placeholder: "如 dwd_network"
+        help: "生成的表将存放在此数据库中"
+
+      # ---------- 自动生成的表列表 ----------
+      - name: tables
+        type: ArrayField
+        required: true
+        description: "从维度树和时间粒度自动生成的表列表（系统自动填充）"
+        generated: true
+        label: "表列表"
+        items:
+          type: ComplexType
+          fields:
+            - name: nodePath
+              type: ArrayField
+              required: true
+              description: "节点路径"
+              items:
+                type: StringField
+              example: ["province", "city", "cell"]
+              label: "节点路径"
+
+            - name: granularityId
+              type: ReferenceField
+              required: true
+              description: "时间粒度ID"
+              refModelAllowed: ["TimeGranularity"]
+
+            - name: tableName
+              type: StringField
+              required: true
+              description: "表名"
+              example: "bw_15min_cell"
+              label: "表名"
+
+            - name: displayName
+              type: StringField
+              required: false
+              description: "显示名称"
+              example: "小区粒度天表"
+              label: "显示名称"
+              maxLength: 100
+
+            - name: description
+              type: StringField
+              required: false
+              description: "表描述"
+              example: "按小区汇总的带宽日报表"
+              label: "描述"
+              maxLength: 500
+
+            - name: dimensions
+              type: ArrayField
+              required: true
+              description: "该表的维度列表（节点路径对应的维度ID）"
+              items:
+                type: ReferenceField
+                refModelAllowed: ["Dimension"]
+              example: ["Dimension.province", "Dimension.city", "Dimension.cell"]
+              label: "维度"
+
+            - name: timePartition
+              type: StringField
+              required: true
+              description: "时间分区字段"
+              example: "ds"
+              label: "时间分区"
+
+            - name: partitionBy
+              type: ArrayField
+              required: false
+              description: "分区字段（包含时间分区）"
+              items:
+                type: StringField
+              example: ["ds"]
+              label: "分区字段"
+              minItems: 0
+              maxItems: 10
+
+            - name: bucketBy
+              type: ArrayField
+              required: false
+              description: "分桶字段"
+              items:
+                type: StringField
+              example: ["province"]
+              label: "分桶字段"
+              minItems: 0
+              maxItems: 10
+
+            - name: bucketCount
+              type: IntegerField
+              required: false
+              description: "分桶数"
+              minimum: 1
+              maximum: 1000
+              example: 16
+              label: "分桶数"
+              unit: "个"
+
+            - name: retention
+              label: "保留时间"
+              description: "数据保留时间"
+              required: true
+              default: "90d"
+              help: "数据保留时间"
+              $ref: "duration.yaml#/components/duration"
+
+            - name: createTableSql
+              type: StringField
+              required: true
+              description: "建表语句"
+              generated: true
+              format: multiline
+              example: |
+                CREATE TABLE bw_daily_province (
+                  ds DATE,
+                  province STRING,
+                  total_bw BIGINT SUM,
+                  avg_bw DOUBLE AVG,
+                  max_bw BIGINT MAX
+                )
+                ENGINE = olap
+                AGGREGATE KEY(ds, province)
+                PARTITION BY RANGE(ds) ()
+                DISTRIBUTED BY HASH(province) BUCKETS 16
+                PROPERTIES ("replication_num" = "3");
+              label: "建表语句"
+              help: "根据配置自动生成的建表SQL"
+
+# ---------- 树节点定义 ----------
+components:
+  TreeNode:
+    type: ComplexType
+    fields:
+      - name: dimensionId
+        type: ReferenceField
+        required: true
+        description: "维度ID"
+        refModelAllowed: ["Dimension"]
+        example: "Dimension.province"
+        label: "维度"
+        placeholder: "如 Dimension.province"
+        help: "选择维度定义"
+
+      - name: alias
+        type: StringField
+        required: true
+        description: "节点别名（用于表名生成）"
+        pattern: "^[a-z][a-z0-9_]*$"
+        example: "province"
+        label: "别名"
+        placeholder: "如 province"
+        help: "小写字母开头，用于生成表名"
+        maxLength: 50
+
+      - name: displayName
+        type: StringField
+        required: false
+        description: "节点显示名称"
+        example: "省份"
+        label: "显示名称"
+        placeholder: "如 省份"
+        maxLength: 100
+
+      - name: description
+        type: StringField
+        required: false
+        description: "节点描述"
+        label: "描述"
+        placeholder: "请输入节点描述"
+        maxLength: 200
+
+      # ---------- 表定义 ----------
+      - name: generateTable
+        type: BooleanField
+        required: false
+        default: true
+        description: "是否为该节点生成表（所有时间粒度）"
+        label: "生成表"
+
+      - name: partitionBy
+        type: ArrayField
+        required: false
+        description: "分区字段（不指定则只用时间分区）"
+        items:
+          type: StringField
+        example: ["ds"]
+        label: "分区字段"
+        help: "可以包含时间分区和维度分区"
+        minItems: 0
+        maxItems: 10
+        dependsOn: "{generateTable}==true"
+
+      - name: bucketBy
+        type: ArrayField
+        required: false
+        description: "分桶字段"
+        items:
+          type: StringField
+        example: ["province"]
+        label: "分桶字段"
+        help: "用于数据分散和查询优化"
+        minItems: 0
+        maxItems: 10
+        dependsOn: "{generateTable}==true"
+
+      - name: bucketCount
+        type: IntegerField
+        required: false
+        description: "分桶数"
+        minimum: 1
+        maximum: 1000
+        example: 16
+        label: "分桶数"
+        unit: "个"
+        help: "不填则使用StarRocks默认值"
+        dependsOn: "{generateTable}==true"
+
+      - name: queryMustParams
+        type: StringField
+        required: false
+        description: "查询该表时必须携带的维度参数"
+        example: "city&country"
+        label: "查询时必须携带的维度参数"
+        placeholder: "如 city&country"
+        help: "由一个或多个维度名组成，可以用&或|连接。表示查询该表时，必须携带这些维度（&时）或某个维度（|时）"
+        dependsOn: "{generateTable}==true"
+
+      # ---------- 子节点 ----------
+      - name: children
+        type: ArrayField
+        required: false
+        description: "子节点"
+        label: "子节点"
+        items:
+          type: ComplexType
+          $ref: "#/components/TreeNode"
+        maxItems: 100

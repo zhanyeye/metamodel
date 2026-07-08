@@ -1,0 +1,53 @@
+# ============================================
+# 定制点定义元模型 (CustomizationPoint)
+# 版本: 1.0.0
+# 描述: 定制点定义，包含规则引用
+# ============================================
+components:
+  customizationPoint:
+    type: ComplexField
+    description: "定制点"
+
+    fields:
+      # ---------- 定制点ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "CustomizationPoint.{name}"
+        description: "定制点ID，自动生成"
+        label: "定制点ID"
+        help: "格式: CustomizationPoint.{name}，自动生成"
+
+      # ---------- 定制点名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "定制点名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "cacheKeyGeneration"
+        label: "定制点名称"
+        placeholder: "如 cacheKeyGeneration"
+        unique: true
+        maxLength: 100
+
+      # ---------- 定制点描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "定制点描述"
+        maxLength: 200
+        example: "缓存Key生成策略"
+        label: "描述"
+        placeholder: "请输入定制点描述"
+
+      # ---------- 规则列表 ----------
+      - name: rules
+        type: ArrayField
+        required: false
+        description: "规则列表"
+        label: "规则"
+        items:
+          $ref: "rule.yaml#/components/Rule"
+        minItems: 0
+        maxItems: 100

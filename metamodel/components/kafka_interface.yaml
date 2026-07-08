@@ -1,0 +1,65 @@
+# ============================================
+# Kafka接口定义元模型 (KafkaInterface)
+# 版本: 1.0.0
+# 描述: Kafka接口定义，可被微服务集成
+# ============================================
+components:
+  kafkaInterface:
+    type: ComplexField
+    description: "Kafka接口定义"
+
+    fields:
+      # ---------- 接口ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "KafkaInterface.{name}"
+        description: "接口ID，自动生成"
+        label: "接口ID"
+        help: "格式: KafkaInterface.{name}，自动生成"
+
+      # ---------- 接口名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "接口名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "kafkaDataProduce"
+        label: "接口名称"
+        placeholder: "如 kafkaDataProduce"
+        unique: true
+        maxLength: 100
+
+      # ---------- 接口描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "接口描述"
+        maxLength: 500
+        example: "Kafka数据生产接口"
+        label: "描述"
+
+      # ---------- Kafka Topic ----------
+      - name: topic
+        type: ReferenceField
+        required: true
+        description: "Kafka Topic"
+        refModelAllowed: ["KafkaTopic"]
+        example: "KafkaTopic.bw-raw"
+        label: "Topic"
+        placeholder: "如 KafkaTopic.bw-raw"
+
+      # ---------- 方向 ----------
+      - name: direction
+        type: EnumField
+        required: true
+        description: "方向"
+        enum:
+          - "IN"
+          - "OUT"
+        example: "IN"
+        label: "方向"
+        options:
+          - "接收"
+          - "发送"

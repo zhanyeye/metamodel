@@ -1,0 +1,135 @@
+# ============================================
+# 测试元模型文件（包含各种典型错误）
+# 用于验证脚本的错误检测能力
+# ============================================
+models:
+  - modelType: "TestModelWithErrors"
+    extends: "NonExistentBase"  # 错误1: 继承不存在的模型
+    version: 1.0.0
+    description: "包含各种错误的测试模型"
+
+    fields:
+      # ---------- 错误2: 缺少 name 字段 ----------
+      - type: StringField  # 缺少 name 属性
+        required: true
+        example: 123  # 错误3: example 应该是字符串但实际是整数
+      
+      # ---------- 错误4-6: 字段类型未定义 ----------
+      - name: invalidField1
+        type: NonExistentFieldType  # 错误4: 未知类型
+      
+      # ---------- 错误7-8: 必填字段属性类型错误 ----------
+      - name: maxLengthTest
+        type: StringField
+        maxLength: "500"  # 错误7: 应该是整数但实际是字符串
+      
+      # ---------- 错误9-10: 未定义的属性 ----------
+      - name: validField
+        type: StringField
+        required: true
+        customProperty: value  # 错误9: StringField 不支持 customProperty
+        maxLength: 100
+        example: "valid"
+      
+      # ---------- 错误11-12: ArrayField 属性错误 ----------
+      - name: arrayField
+        type: ArrayField
+        required: true
+        minItems: "1"  # 错误11: 应该是整数但实际是字符串
+        maxItems: "100"  # 错误12: 应该是整数但实际是字符串
+        example: "not-an-array"  # 错误13: ArrayField example 应该是数组
+
+      # ---------- 错误14: 正则表达式不匹配 ----------
+      - name: patternTest
+        type: StringField
+        required: true
+        pattern: "^[0-9]+$"  # 只允许数字
+        example: "invalid-text"  # 错误14: 不匹配正则表达式
+
+      # ---------- 错误15: 枚举值错误 ----------
+      - name: enumTest
+        type: EnumField
+        required: true
+        enum: ["option1", "option2", "option3"]
+        example: "invalid-option"  # 错误15: 不在枚举范围内
+
+      # ---------- 错误16: IntegerField 数值范围错误 ----------
+      - name: rangeTest
+        type: IntegerField
+        required: true
+        minimum: 10
+        maximum: 100
+        example: 5  # 错误16: 小于最小值
+
+      # ---------- 错误17: ReferenceField 引用模型不存在 ----------
+      - name: refTest
+        type: ReferenceField
+        required: true
+        refModelAllowed: ["NonExistentModel"]  # 错误17: 引用模型不存在
+
+      # ---------- 错误18: 错误的引用格式 ----------
+      - name: invalidRef
+        type: ArrayField
+        $ref: "invalid_reference_path"  # 错误18: 无效的引用格式
+
+      # ---------- 错误19-21: ComplexType 内部字段错误 ----------
+      - name: complexTest
+        type: ComplexType
+        required: true
+        fields:
+          - name: subField1
+            type: StringField
+            required: true
+            subProperty: value  # 错误19: StringField 不支持 subProperty
+
+          - name: subField2
+            type:  # 错误20: 缺少字段类型
+              required: true
+
+      # ---------- 错误22: minValue 错误 ----------
+      - name: minValueTest  
+        type: IntegerField
+        required: true
+        minValue: 10  # 错误22: 字段不支持 minValue (应该是 minimum)
+        example: 5
+
+      # ---------- ✅ 正确的字段定义 ----------
+      - name: correctField
+        type: StringField  
+        required: false
+        description: "这是一个正确的字段定义"
+        maxLength: 200
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "correct-example"
+
+      # ---------- 错误23: 重复的 fieldName ----------
+      - name: duplicateField
+        type: StringField
+        required: true
+        example: "test1"
+
+      # ---------- 错误24: 重复的 fieldName ----------  
+      - name: duplicateField  # 错误24: 与上面的字段重名
+        type: IdField
+        required: true
+        generated: true
+        description: "重复的字段名"
+
+#---------- 错误25-26: components 部分错误 ----------  
+components:
+  invalidComponent:  # 错误25: component 缺少 type 属性
+    required: true
+    minLength: 1
+
+  validComponent:
+    type: ArrayField  # 错误26: ArrayField 缺少 required 属性
+    minItems: 1
+    maxItems: 50
+    
+  #---------- 错误27-28: 数组分元素 type 错误 ----------
+  arrayComponent:
+    type: ArrayField
+    required: true
+    items:
+      type: NonExistentType  # 错误27: 数组元素类型不存在
+      required: true

@@ -1,0 +1,78 @@
+# ============================================
+# 消息定义可复用部分
+# 版本: 1.0.0
+# 描述: 消息定义可复用部分
+# ============================================
+components:
+  # ---------- 一组信元 ----------
+  msgFields:
+    type: ArrayField
+    required: false
+    minItems: 0
+    maxItems: 1000
+    label: "字段列表"
+    items:
+      $ref: "#/components/msgField"
+
+  # ---------- 单个信元 ----------
+  msgField:
+    type: ComplexType
+    fields:
+      # ---------- 字段名 ----------
+      - name: fieldName
+        type: StringField
+        required: true
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        label: "字段名"
+        help: "消息中的实际字段名"
+
+      # ---------- 字段ID ----------
+      - name: id
+        type: IntegerField
+        required: true
+        minimum: 1
+        maximum: 65535
+        label: "字段ID"
+        help: "字段的数字标识，用于pb编码"
+
+      # ---------- 是否repeated ----------
+      - name: repeated
+        type: BooleanField
+        required: false
+        default: false
+        label: "repeated"
+        help: "消息中该字段是否repeated"
+
+      # ---------- 字段类型 ----------
+      - name: fieldType
+        type: EnumField
+        required: true
+        enum:
+          - BYTES
+          - STRING
+          - UINT8
+          - UINT16
+          - UINT32
+          - UINT64
+          - DOUBLE
+          - IP
+          - HEXSTRING
+          - ULISTRING
+          - RBCD
+          - STRUCT
+          - REFFIELD
+        label: "字段类型"
+        help: "字段的数据类型"
+
+      - name: elements
+        required: false
+        dependsOn: "{fieldType}==STRUCT"
+        $ref: "#/components/msgFields"
+
+      # ---------- 引用可复用信元 ----------
+      - name: refField
+        type: ReferenceField
+        required: false
+        refModelAllowed: [ "MsgCommonField" ]
+        label: "引用可复用信元"
+        dependsOn: "{fieldType}==REFFIELD"

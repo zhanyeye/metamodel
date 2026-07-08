@@ -1,0 +1,174 @@
+# ============================================
+# DDM服务定义元模型
+# 版本: 1.0.0
+# 描述: DDM微服务定义
+# ============================================
+models:
+  - modelType: "DDM"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "DDM微服务定义"
+
+    fields:
+      # ---------- 微服务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "ServiceDef.{name}"
+        description: "微服务ID，自动生成"
+        label: "微服务ID"
+        help: "格式: ServiceDef.{name}，自动生成"
+
+      # ---------- 微服务名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "微服务名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "user-profile-service"
+        label: "微服务名称"
+        placeholder: "如 user-profile-service"
+        unique: true
+        maxLength: 100
+
+      # ---------- 微服务描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "微服务描述"
+        maxLength: 500
+        example: "用户资料管理微服务"
+        label: "描述"
+        placeholder: "请输入微服务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该微服务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.user-profile", "Feature.user-cache"]
+        label: "特性"
+        help: "选择该微服务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 责任人 ----------
+      - name: owner
+        type: StringField
+        required: true
+        description: "责任人/团队"
+        example: "team-user"
+        label: "责任人"
+        placeholder: "如 team-user"
+        maxLength: 100
+
+      # ---------- token数 ----------
+      - name: tokenNum
+        type: IntegerField
+        required: true
+        description: "token数"
+        label: "token数"
+        help: "token个数。需要跟实现保持一致。建模平台会检查该服务接收的kafka topic分区数和token数是否一致"
+        minimum: 1
+
+      # ---------- 输入 ----------
+      - name: inputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        description: "输入定义列表，至少需要一个输入"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: [ "DataNode" ]
+
+            - name: filter
+              type: StringField
+              required: false
+              description: "源端过滤条件"
+
+            - name: options
+              type: StringField
+              required: false
+              description: "读取选项"
+
+      # ---------- 输出 ----------
+      - name: outputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        description: "输出定义列表，至少需要一个输出"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: [ "SdrMessage", "KafkaTopic" ]
+
+            - name: options
+              type: StringField
+              required: false
+              description: "写入选项"
+
+      # ========== 接口集成 ==========
+      - name: interfaces
+        type: ComplexType
+        required: false
+        description: "接口集成"
+        label: "接口"
+        fields:
+          - name: http
+            type: ArrayField
+            required: false
+            description: "HTTP接口"
+            items:
+              $ref: "http_interface.yaml#/components/HttpInterface"
+            label: "HTTP接口"
+
+          - name: sdr
+            type: ArrayField
+            required: false
+            description: "SDR接口"
+            items:
+              $ref: "sdr_interface.yaml#/components/SdrInterface"
+            label: "SDR接口"
+
+          - name: kafka
+            type: ArrayField
+            required: false
+            description: "Kafka接口"
+            items:
+              $ref: "kafka_interface.yaml#/components/KafkaInterface"
+            label: "Kafka接口"
+
+      # ========== Fact集成 ==========
+      - name: facts
+        type: ArrayField
+        required: false
+        description: "Fact列表"
+        items:
+          $ref: "fact.yaml#/components/Fact"
+        label: "Fact列表"
+        minItems: 0
+        maxItems: 100
+
+      # ========== 流程集成 ==========
+      - name: processes
+        type: ArrayField
+        required: false
+        description: "流程列表"
+        items:
+          $ref: "process.yaml#/components/Process"
+        label: "流程列表"
+        minItems: 0
+        maxItems: 100

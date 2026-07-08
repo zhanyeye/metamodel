@@ -1,0 +1,329 @@
+# ============================================
+# StarRocks 表元模型 (StarRocksTable)
+# 版本: 1.0.0
+# 描述: StarRocks表配置元模型
+# ============================================
+models:
+  - modelType: "StarRocksTable"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "StarRocks表建模元模型"
+
+    fields:
+      # ---------- 表ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "StarRocksTable.{database}.{table}"
+        description: "表ID，自动生成"
+        label: "表ID"
+        help: "格式: StarRocksTable.{database}.{table}，自动生成"
+
+      # ---------- 数据库名称 ----------
+      - name: database
+        type: StringField
+        required: true
+        description: "数据库名称"
+        pattern: "^[a-zA-Z0-9_]+$"
+        example: "dwd_network"
+        label: "数据库"
+        placeholder: "如 dwd_network"
+        help: "StarRocks中的数据库名"
+
+      # ---------- 表名 ----------
+      - name: table
+        type: StringField
+        required: true
+        description: "表名，在数据库内唯一"
+        pattern: "^[a-zA-Z0-9_]+$"
+        example: "bw_agg_daily"
+        label: "表名"
+        placeholder: "如 bw_agg_daily"
+        help: "StarRocks中的实际表名"
+        unique: true  # 在database内唯一
+
+      # ---------- 表描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "表的业务描述"
+        maxLength: 500
+        example: "带宽日聚合表"
+        label: "描述"
+        placeholder: "请输入表的业务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该表用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该表支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "该表所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该表所属的数据分层"
+
+      # ---------- 表类型 ----------
+      - name: tableType
+        type: EnumField
+        required: true
+        description: "表类型"
+        enum:
+          - PRIMARY
+          - DUPLICATE
+          - AGGREGATE
+        default: "PRIMARY"
+        label: "表类型"
+        options:
+          - "主键模型"
+          - "明细模型"
+          - "聚合模型（暂未实现）"
+        help: "DUPLICATE: 原始日志, AGGREGATE: 数据汇总, PRIMARY: 实时更新, UNIQUE表废弃"
+
+      # ---------- 表定义 ----------
+      - name: columns
+        type: ArrayField
+        required: false
+        description: "字段列表"
+        minItems: 0
+        maxItems: 1000
+        label: "字段列表"
+        help: "字段顺序非常重要。主key放最前面；查询频繁，过滤性好的字段放前面"
+        items:
+          type: ComplexField
+          fields:
+            - name: columnName
+              type: StringField
+              required: true
+              description: "字段名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              label: "字段名"
+
+            - name: columnType
+              label: "字段类型"
+              $ref: "#/components/fieldType"
+
+            - name: isPrimaryKey
+              type: BooleanField
+              required: false
+              default: false
+              label: "是否主Key"
+              dependsOn: "{tableType}==PRIMARY"
+              # columnType.fieldType这种应该还不支持 dependsOn: "{tableType}==PRIMARY && ({columnType.fieldType}==TINYINT || {columnType.fieldType}==SMALLINT || {columnType.fieldType}==INT || {columnType.fieldType}==BIGINT || {columnType.fieldType}==LARGEINT || {columnType.fieldType}==BOOLEAN || {columnType.fieldType}==STRING || {columnType.fieldType}==VARCHAR || {columnType.fieldType}==CHAR || {columnType.fieldType}==DATE || {columnType.fieldType}==DATETIME)"
+              # 不支持引用外层的 dependsOn: "{tableType}==PRIMARY"
+
+            - name: isPartitionKey
+              type: BooleanField
+              required: false
+              default: false
+              label: "是否分区Key"
+              help: "主键表的分区Key必须是主Key，明细表没有约束"
+              # 不支持引用外层的 dependsOn: "({tableType}==PRIMARY&&{isPrimaryKey}=true)||{tableType}==DUPLICATE"
+
+            - name: isHashDistributedKey
+              type: BooleanField
+              required: false
+              default: false
+              label: "是否HASH分桶Key"
+              help: "主键表的分桶Key必须是主Key，明细表没有约束"
+              # 不支持引用外层的 dependsOn: "({tableType}==PRIMARY&&{isPrimaryKey}=true)||{tableType}==DUPLICATE"
+
+            - name: isOrderKey
+              type: BooleanField
+              required: false
+              default: false
+              label: "是否排序Key"
+              description: "用于where查询时二分查找，默认使用主键"
+              # columnType.fieldType这种应该还不支持 dependsOn: "({columnType.fieldType}==TINYINT || {columnType.fieldType}==SMALLINT || {columnType.fieldType}==INT || {columnType.fieldType}==BIGINT || {columnType.fieldType}==LARGEINT || {columnType.fieldType}==BOOLEAN || {columnType.fieldType}==STRING || {columnType.fieldType}==VARCHAR || {columnType.fieldType}==CHAR || {columnType.fieldType}==DATE || {columnType.fieldType}==DATETIME) || (tableType==DUPLICATE && {columnType.fieldType}==DECIMAL)"
+
+            - name: isNullable
+              type: BooleanField
+              required: false
+              default: true
+              label: "可为空"
+
+            - name: defaultValue
+              type: StringField
+              required: false
+              label: "默认值"
+              dependsOn: "{isNullable}==true"
+
+            - name: description
+              type: StringField
+              required: false
+              maxLength: 200
+              label: "描述"
+
+      # ---------- SQL语句片段 ----------
+      - name: sqlFragement
+        type: StringField
+        required: false
+        format: multiline
+        label: "SQL片段"
+        help: "会拼到SQL的最后面。可以完全定义一张表，也可以定义灵活的分区、分桶、索引等"
+        maxLength: 5000
+
+      # ---------- 自动生成的建表SQL ----------
+      - name: generatedSql
+        type: StringField
+        required: false
+        format: multiline
+        label: "生成的建表SQL"
+        maxLength: 5000
+        generated: true
+        script: "scripts/starrocks_sql_generator.py"
+
+      - name: primaryRetentionPolicy
+        type: ComplexField
+        required: false
+        label: "主键表数据保留策略"
+        # dependsOn: "{tableType}==PRIMARY"
+        fields:
+          - name: deleteCondition
+            type: StringField
+            label: "删除条件"
+            required: true
+            help: "例如'update_time < CURRENT_DATE - INTERVAL 7 DAY'是删除update_time字段7天前更新的数据"
+
+          - name: schedule
+            required: true
+            label: "调度"
+            $ref: "schedule.yaml#/components/schedule"
+        help: "主键表按条件删除"
+
+      - name: duplicateRetentionPolicy
+        type: ComplexField
+        required: false
+        label: "明细表数据保留策略"
+        # dependsOn: "{tableType}==DUPLICATE"
+        fields:
+          - name: retentionPeriod
+            label: "保留时间"
+            required: true
+            $ref: "duration.yaml#/components/duration"
+
+          - name: schedule
+            required: true
+            label: "调度"
+            $ref: "schedule.yaml#/components/schedule"
+        help: "明细表按时间分区老化"
+
+components:
+  fieldType:
+    type: ComplexField
+    fields:
+      - name: fieldType
+        type: EnumField
+        required: true
+        enum:
+          - TINYINT
+          - SMALLINT
+          - INT
+          - BIGINT
+          - LARGEINT
+          - FLOAT
+          - DOUBLE
+          - DECIMAL
+          - DATE
+          - DATETIME
+          - CHAR
+          - VARCHAR
+          - STRING
+          - BOOLEAN
+          - VARBINARY
+          - JSON
+          - ARRAY
+          - MAP
+          - STRUCT
+        label: "字段类型"
+
+      - name: decimalPara
+        label: "DECIMAL参数"
+        dependsOn: "{fieldType}==DECIMAL"
+        $ref: "#/components/decimalPara"
+
+      - name: charLen
+        type: IntegerField
+        required: false
+        label: "长度"
+        dependsOn: "{fieldType}==CHAR"
+
+      - name: varCharLen
+        type: IntegerField
+        required: false
+        label: "最大长度"
+        dependsOn: "{fieldType}==VARCHAR"
+
+      - name: varBinLen
+        type: IntegerField
+        required: false
+        label: "最大长度"
+        dependsOn: "{fieldType}==VARBINARY"
+
+      - name: arrayPara
+        label: "array元素类型"
+        dependsOn: "{fieldType}==ARRAY"
+        $ref: "#/components/fieldType"
+
+      - name: mapPara
+        label: "MAP参数"
+        dependsOn: "{fieldType}==MAP"
+        $ref: "#/components/mapPara"
+
+      - name: structPara
+        required: false
+        label: "数组元素类型"
+        dependsOn: "{mapKeyType}==STRUCT"
+        $ref: "#/components/structPara"
+
+  decimalPara:
+    type: ComplexType
+    fields:
+      - name: precision
+        type: IntegerField
+        required: false
+        label: "精度"
+
+      - name: scale
+        type: IntegerField
+        required: false
+        label: "小数位数"
+
+  mapPara:
+    type: ComplexType
+    fields:
+      - name: keyType
+        label: "Key类型（不支持MAP、STRUCT、ARRAY）"
+        $ref: "#/components/fieldType"
+      - name: valueType
+        label: "Value类型"
+        $ref: "#/components/fieldType"
+
+  structPara:
+    type: ArrayField
+    items:
+      type: ComplexType
+      fields:
+        - name: fieldName
+          type: StringField
+          required: true
+          label: "字段名"
+
+        - name: fieldType
+          label: "字段类型"
+          $ref: "#/components/fieldType"

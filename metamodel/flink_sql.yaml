@@ -1,0 +1,628 @@
+# ============================================
+# Flink SQL 计算任务元模型 (FlinkSQLJob)
+# 版本: 1.0.0
+# 描述: Flink SQL任务定义，支持Kafka、StarRocks、HDFS作为输入输出
+# ============================================
+models:
+  - modelType: "FlinkSQL"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "Flink SQL计算任务元模型"
+
+    fields:
+      # ---------- 任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "FlinkSQLJob.{name}"
+        description: "任务ID，自动生成"
+        label: "任务ID"
+        help: "格式: FlinkSQLJob.{name}，自动生成"
+
+      # ---------- 任务名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "任务名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-daily-agg"
+        label: "任务名称"
+        placeholder: "如 bw-daily-agg"
+        help: "任务的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 任务描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "任务描述"
+        maxLength: 500
+        example: "从Kafka读取带宽原始数据，按天聚合后写入StarRocks"
+        label: "描述"
+        placeholder: "请输入任务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该任务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: [ "Feature" ]
+        example: [ "Feature.offline-analysis", "Feature.report-generation" ]
+        label: "特性"
+        help: "选择该任务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ========== 输入定义 ==========
+      - name: inputs
+        $ref: "#/components/inputs"
+
+      # ========== 输出定义 ==========
+      - name: outputs
+        $ref: "#/components/outputs"
+
+      # ========== SQL定义 ==========
+      - name: sql
+        $ref: "#/components/sql"
+
+      # ========== 维表定义 ==========
+      - name: dimensionTables
+        $ref: "#/components/dimensionTables"
+
+      # ========== 使用的UDF列表 ==========
+      - name: udfs
+        $ref: "#/components/udfs"
+
+      # ========== 执行模式 ==========
+      - name: executionType
+        $ref: "#/components/executionType"
+
+      # ========== 资源规格 ==========
+      - name: resources
+        $ref: "#/components/resources"
+
+      # ========== 状态后端配置 ==========
+      - name: stateBackend
+        $ref: "#/components/stateBackend"
+
+      # ========== Checkpoint配置 ==========
+      - name: checkpoint
+        $ref: "#/components/checkpoint"
+
+      # ========== 重启策略 ==========
+      - name: restartStrategy
+        $ref: "#/components/restartStrategy"
+
+      # ========== 调度配置（仅BATCH模式）==========
+      - name: schedule
+        $ref: "#/components/schedule"
+
+      # ========== 自定义参数 ==========
+      - name: customParameters
+        $ref: "#/components/customParameters"
+
+      # ========== Kafka Consumer自定义参数 ==========
+      - name: kafkaConsumerConf
+        $ref: "kafka_consumer.yaml#/components/globalConf"
+
+      # ========== Kafka Producer自定义参数 ==========
+      - name: kafkaProducerConf
+        $ref: "kafka_producer.yaml#/components/globalConf"
+
+      # ========== flink自定义参数 ==========
+      - name: customParameters
+        $ref: "#/components/customParameters"
+
+components:
+  inputs:
+    type: ArrayField
+    required: true
+    minItems: 1
+    maxItems: 50
+    description: "输入数据源列表"
+    label: "输入"
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          description: "输入别名，用于SQL中引用"
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          example: "bw_raw"
+          label: "别名"
+          placeholder: "如 bw_raw"
+          help: "SQL中使用的表名"
+          maxLength: 100
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          description: "引用已定义的数据源ID"
+          label: "数据源ID"
+          placeholder: "如 KafkaTopic.bw-raw"
+          refModelAllowed: [ "KafkaTopic", "HDFSRawData", "IcebergTable", "StarRocksTable" ]
+          help: "引用已定义的数据源"
+
+        - name: filter
+          type: StringField
+          required: false
+          description: "数据源端过滤条件（用于分区裁剪）"
+          example: "dt = '2024-01-01'"
+          label: "源端过滤"
+          placeholder: "如 dt = '2024-01-01'"
+          help: "在数据源端执行的过滤，减少数据传输量"
+          maxLength: 500
+
+        - name: conf
+          $ref: "kafka_consumer.yaml#/components/topicConf"
+
+
+  outputs:
+    type: ArrayField
+    required: true
+    minItems: 1
+    maxItems: 20
+    description: "输出目标列表"
+    label: "输出"
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          description: "输出别名，用于SQL中引用"
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          example: "bw_daily_agg"
+          label: "别名"
+          placeholder: "如 bw_daily_agg"
+          maxLength: 100
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          description: "引用已定义的数据源ID"
+          label: "数据源ID"
+          placeholder: "如 KafkaTopic.bw-raw"
+          refModelAllowed: [ "KafkaTopic", "HDFSRawData", "IcebergTable", "StarRocksTable" ]
+          help: "引用已定义的数据源"
+
+        - name: parallelism
+          type: IntegerField
+          required: false
+          description: "输出并行度"
+          minimum: 1
+          maximum: 1000
+          example: 4
+          label: "输出并行度"
+          unit: "个"
+          help: "覆盖全局并行度"
+
+        - name: conf
+          $ref: "kafka_producer.yaml#/components/topicConf"
+
+  sql:
+    type: ComplexType
+    required: true
+    description: "SQL计算逻辑"
+    label: "SQL"
+    fields:
+      - name: content
+        type: StringField
+        required: true
+        description: "SQL内容"
+        format: multiline
+        example: |
+          INSERT INTO bw_daily_agg
+          SELECT 
+            device_id,
+            DATE_FORMAT(event_time, 'yyyy-MM-dd') as ds,
+            SUM(bw_value) as total_bw
+          FROM bw_raw
+          GROUP BY device_id, DATE_FORMAT(event_time, 'yyyy-MM-dd')
+        label: "SQL内容"
+        placeholder: "输入SQL语句"
+        help: "完整的SQL逻辑，包括INSERT、CREATE VIEW等"
+        maxLength: 50000
+
+  dimensionTables:
+    type: ArrayField
+    required: false
+    description: "维表列表（用于Lookup Join）"
+    label: "维表"
+    minItems: 0
+    maxItems: 20
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          description: "维表别名，用于SQL中引用"
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          example: "device_dim"
+          label: "别名"
+          placeholder: "如 device_dim"
+          maxLength: 100
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          description: "引用已定义的维表ID"
+          label: "维表ID"
+          placeholder: "如 StarRocksTable.device"
+          refModelAllowed: [ "StarRocksTable" ]
+          help: "引用维度定义"
+
+        - name: lookupOptions
+          type: StringField
+          required: false
+          description: "维表查询选项"
+          format: multiline
+          example: |
+            lookup.cache.max-rows=10000
+            lookup.cache.ttl=1h
+          placeholder: |
+            lookup.cache.max-rows=10000
+            lookup.cache.ttl=1h
+          label: "查询选项"
+          help: "维表查询的缓存等配置"
+          maxLength: 2000
+
+        - name: broadcast
+          type: BooleanField
+          required: false
+          default: false
+          description: "是否广播维表"
+          label: "广播维表"
+          help: "是否广播小维表优化性能"
+
+  udfs:
+    type: ArrayField
+    required: false
+    description: "用户自定义函数"
+    label: "CalcUDF"
+    minItems: 0
+    maxItems: 50
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          description: "CalcUDF名称（SQL中使用的函数名）"
+          example: "bw_process"
+          label: "函数名"
+          placeholder: "如 bw_process"
+          help: "SQL语句中使用的函数别名"
+          maxLength: 100
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          description: "引用已定义的CalcUDF ID"
+          label: "CalcUDF ID"
+          placeholder: "如 CalcUDF.bw_custom_processor"
+          refModelAllowed: [ "CalcUDF" ]
+          help: "选择已定义的UDF"
+
+  executionType:
+    type: EnumField
+    required: true
+    description: "执行模式"
+    enum:
+      - "STREAMING"
+      - "BATCH"
+    default: "STREAMING"
+    example: "STREAMING"
+    label: "执行模式"
+    options:
+      - "流处理（持续运行）"
+      - "批处理（定时运行）"
+    help: "选择任务的执行模式"
+
+  resources:
+    type: ComplexType
+    required: true
+    description: "资源规格配置"
+    label: "资源规格"
+    fields:
+      - name: parallelism
+        type: IntegerField
+        required: true
+        description: "作业整体并行度"
+        minimum: 1
+        maximum: 10000
+        default: 1
+        example: 4
+        label: "并行度"
+        unit: "个"
+        help: "作业整体并行度"
+
+      - name: jobManager
+        type: ComplexType
+        required: true
+        label: "JobManager"
+        fields:
+          - name: memoryMB
+            type: IntegerField
+            required: true
+            description: "JobManager内存"
+            minimum: 512
+            maximum: 32768
+            default: 1024
+            example: 2048
+            label: "内存"
+            unit: "MB"
+
+          - name: cpuCores
+            type: NumberField
+            required: false
+            description: "JobManager CPU核数"
+            minimum: 0.1
+            maximum: 10
+            example: 1
+            label: "CPU核数"
+            unit: "核"
+
+      - name: taskManager
+        type: ComplexType
+        required: true
+        label: "TaskManager"
+        fields:
+          - name: count
+            type: IntegerField
+            required: true
+            description: "TaskManager数量"
+            minimum: 1
+            maximum: 1000
+            default: 1
+            example: 2
+            label: "数量"
+            unit: "个"
+
+          - name: memoryMB
+            type: IntegerField
+            required: true
+            description: "每个TaskManager的内存"
+            minimum: 512
+            maximum: 65536
+            default: 2048
+            example: 4096
+            label: "内存"
+            unit: "MB"
+
+          - name: cpuCores
+            type: NumberField
+            required: false
+            description: "每个TaskManager的CPU核数"
+            minimum: 0.1
+            maximum: 32
+            example: 2
+            label: "CPU核数"
+            unit: "核"
+
+  stateBackend:
+    type: ComplexType
+    required: false
+    description: "状态后端配置"
+    label: "状态后端"
+    fields:
+      - name: type
+        type: EnumField
+        required: true
+        description: "状态后端类型"
+        enum:
+          - "ROCKSDB"
+          - "HASHMAP"
+        default: "ROCKSDB"
+        example: "ROCKSDB"
+        label: "类型"
+        options:
+          - "RocksDB（适合大状态）"
+          - "HashMap（适合小状态）"
+        help: "选择状态后端类型"
+
+      - name: incremental
+        type: BooleanField
+        required: false
+        default: true
+        description: "是否启用增量Checkpoint（RocksDB）"
+        label: "增量Checkpoint"
+        help: "开启后只存储变更的SST文件"
+        dependsOn: "{type}==ROCKSDB"
+
+      - name: options
+        type: StringField
+        required: false
+        description: "RocksDB其他参数"
+        format: multiline
+        example: |
+          state.backend.rocksdb.block.cache-size=256mb
+        placeholder: |
+          state.backend.rocksdb.block.cache-size=256mb
+          state.backend.rocksdb.write-batch-size=2mb
+        label: "RocksDB参数"
+        help: "一行一个 key: value"
+        maxLength: 5000
+        dependsOn: "{type}==ROCKSDB"
+
+  checkpoint:
+    type: ComplexType
+    required: false
+    description: "Checkpoint配置"
+    label: "Checkpoint"
+    fields:
+      - name: interval
+        label: "间隔"
+        description: "Checkpoint间隔"
+        required: true
+        default: "300s"
+        help: "spark.sql.broadcastTimeout"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: timeout
+        label: "超时时间"
+        description: "超时时间"
+        required: false
+        default: "10m"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: minPause
+        label: "最小间隔"
+        description: "最小间隔"
+        required: false
+        default: "1m"
+        help: "两个Checkpoint之间的最小间隔"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: maxConcurrent
+        type: IntegerField
+        required: false
+        default: 1
+        minimum: 1
+        maximum: 10
+        example: 1
+        label: "最大并发数"
+        unit: "个"
+
+      - name: mode
+        type: EnumField
+        required: false
+        description: "一致性模式"
+        enum:
+          - "EXACTLY_ONCE"
+          - "AT_LEAST_ONCE"
+        default: "EXACTLY_ONCE"
+        label: "一致性模式"
+        options:
+          - "精确一次"
+          - "至少一次"
+
+      - name: retain
+        type: EnumField
+        required: false
+        description: "保留策略"
+        enum:
+          - "ON_CANCEL"
+          - "ON_FAILURE"
+          - "NONE"
+        default: "ON_CANCEL"
+        label: "保留策略"
+        options:
+          - "取消时保留"
+          - "失败时保留"
+          - "不保留"
+
+      - name: storage
+        type: StringField
+        required: true
+        description: "Checkpoint存储路径"
+        example: "hdfs:///flink/checkpoints"
+        label: "存储路径"
+        placeholder: "如 hdfs:///flink/checkpoints"
+        help: "Checkpoint在HDFS上的存储路径"
+        maxLength: 500
+
+  restartStrategy:
+    type: ComplexType
+    required: false
+    description: "重启策略"
+    label: "重启策略"
+    fields:
+      - name: type
+        type: EnumField
+        required: true
+        description: "策略类型"
+        enum:
+          - "FIXED_DELAY"
+          - "FAILURE_RATE"
+          - "NONE"
+        default: "FIXED_DELAY"
+        label: "策略类型"
+        options:
+          - "固定延迟"
+          - "失败率限制"
+          - "不重启"
+
+      - name: attempts
+        type: IntegerField
+        required: false
+        description: "重试次数（不配置则无限重试）"
+        minimum: 1
+        maximum: 100
+        example: 3
+        label: "重试次数"
+        unit: "次"
+        dependsOn: "{type}==FIXED_DELAY"
+
+      - name: delay
+        label: "重试间隔"
+        description: "重试间隔"
+        required: false
+        default: "10s"
+        help: "两次重试之间的等待时间"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: maxFailuresPerInterval
+        type: IntegerField
+        required: false
+        description: "最大失败次数"
+        minimum: 1
+        maximum: 100
+        example: 5
+        label: "最大失败次数"
+        unit: "次"
+        dependsOn: "{type}==FAILURE_RATE"
+
+      - name: failureInterval
+        label: "失败统计间隔"
+        description: "失败统计间隔"
+        required: false
+        default: "5m"
+        help: "失败统计间隔"
+        dependsOn: "{type}==FAILURE_RATE"
+        $ref: "duration.yaml#/components/duration"
+
+  schedule:
+    type: ComplexType
+    required: false
+    description: "调度配置（仅BATCH模式使用）"
+    label: "调度"
+    dependsOn: "{executionType}==BATCH"
+    fields:
+      - name: cron
+        type: StringField
+        required: true
+        description: "Cron表达式"
+        example: "0 0 1 * * ?"
+        label: "Cron表达式"
+        placeholder: "如 0 0 1 * * ?"
+        help: "定时调度表达式"
+        maxLength: 100
+
+      - name: timezone
+        type: StringField
+        required: false
+        default: "Asia/Shanghai"
+        example: "Asia/Shanghai"
+        label: "时区"
+        placeholder: "如 Asia/Shanghai"
+        maxLength: 50
+
+  customParameters:
+    type: StringField
+    required: false
+    description: "自定义Flink参数"
+    format: multiline
+    example: |
+      taskmanager.network.memory.buffer-debloat.enabled=true
+    placeholder: |
+      taskmanager.network.memory.buffer-debloat.enabled=true
+      state.backend.rocksdb.write-batch-size=2mb
+    label: "自定义参数"
+    help: "一行一个 key=value，支持所有Flink官方参数"
+    maxLength: 10000

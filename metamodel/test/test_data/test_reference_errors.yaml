@@ -1,0 +1,65 @@
+# ============================================
+# 测试引用解析错误的元模型文件
+# ============================================
+models:
+  - modelType: "TestReferenceErrors"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "测试引用解析和展开的错误"
+
+    fields:
+      # ---------- 错误1: 正确引用 ----------
+      - name: valid-ref  
+        type: ArrayField
+        $ref: "#/components/valid-component"
+      
+      # ---------- 错误2: 引用不存在的组件 ----------
+      - name: invalid-ref
+        type: ArrayField  
+        $ref: "#/components/non-existent-component"  # 错误2: 组件不存在
+      
+      # ---------- 错误3: 引用路径格式错误 ----------
+      - name: malformed-ref
+        type: StringField
+        $ref: "invalid/path/format"  # 错误3: 引用路径格式错误
+      
+      # ---------- 错误4: 跨文件引用不存在 ----------
+      - name: cross-file-ref
+        type: ComplexType
+        $ref: "non_existent_file.yaml#/components/some-component"  # 错误4: 跨文件引用不存在
+
+      # ---------- 错误5: 引用同时定义其他属性（冲突） ----------
+      - name: conflicting-ref  
+        type: StringField
+        $ref: "#/components/valid-component"  # 引用数组组件但定义为StringField
+        required: true  # 错误5: 引用字段不应该定义其他属性
+
+      # ---------- ✅ 正确的引用 ----------
+      - name: correct-ref
+        type: StringField
+        required: true
+        maxLength: 100
+        $ref: "#/components/valid-component"  # 正确引用并合并属性
+
+components:
+  valid-component:  # 这个组件可以被正确引用
+    type: ArrayField
+    required: true
+    minItems: 1
+    maxItems: 50
+    description: "有效的组件定义"
+    
+  #---------- 错误6: 组件中的引用错误 ----------
+  nested-ref:
+    type: ComplexType
+    fields:
+      - name: test
+        type: NonExistentType  # 错误6: 组件内部字段类型不存在
+        
+  #---------- 错误7: 引用循环（可能导致无限递归） ----------  
+  circular-ref:
+    type: ComplexType
+    fields:
+      - name: self-reference
+        type: ArrayField
+        $ref: "test_reference_errors.yaml#/components/circular-ref"  # 错误7: 循环引用

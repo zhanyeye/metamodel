@@ -1,0 +1,116 @@
+# ============================================
+# UDP Collector
+# 版本: 1.0.0
+# 描述: UDP Collector接收数据，解析数据后发送
+# ============================================
+models:
+  - modelType: "UdpCollector"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "UDP Collector接收数据，转换数据后发送"
+
+    fields:
+      # ---------- udp collector任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "UdpCollector.{name}"
+        description: "udp collector任务ID，自动生成"
+        label: "udp collector任务ID"
+        help: "格式: UdpCollector.{name}，自动生成"
+
+      # ---------- udp collector任务名（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "udp collector任务名，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "ufdr-collector"
+        label: "udp collector任务名"
+        placeholder: "如 ufdr-collector"
+        help: "udp collector任务的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 数据描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "任务描述"
+        maxLength: 500
+        example: "体验单据接入"
+        label: "描述"
+        placeholder: "请输入任务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该任务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.northbound-report", "Feature.customer-billing"]
+        label: "特性"
+        help: "选择该任务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 输入 ----------
+      - name: inputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 1
+        description: "输入数据源"
+        label: "输入"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: [ "UdpData" ]
+
+            - name: filter
+              type: StringField
+              required: false
+              description: "源端过滤条件"
+
+            - name: options
+              type: StringField
+              required: false
+              description: "读取选项"
+
+      # ---------- 输出 ----------
+      - name: outputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 10
+        description: "输出的定义"
+        label: "输出"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: [ "SdrMessage", "KafkaTopic" ]
+
+            - name: options
+              type: StringField
+              required: false
+              description: "写入选项"
+
+      # ========== 责任人 ==========
+      - name: owner
+        type: StringField
+        required: true
+        description: "责任人/团队"
+        example: "team-north"
+        label: "责任人"
+        placeholder: "如 team-north"
+        maxLength: 100

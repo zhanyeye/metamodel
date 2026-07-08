@@ -1,0 +1,65 @@
+# ============================================
+# SDR接口定义元模型 (SdrInterface)
+# 版本: 1.0.0
+# 描述: SDR接口定义，可被微服务集成
+# ============================================
+components:
+  sdrInterface:
+    type: ComplexField
+    description: "SDR接口定义"
+
+    fields:
+      # ---------- 接口ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "SdrInterface.{name}"
+        description: "接口ID，自动生成"
+        label: "接口ID"
+        help: "格式: SdrInterface.{name}，自动生成"
+
+      # ---------- 接口名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "接口名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "sdrDataIngest"
+        label: "接口名称"
+        placeholder: "如 sdrDataIngest"
+        unique: true
+        maxLength: 100
+
+      # ---------- 接口描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "接口描述"
+        maxLength: 500
+        example: "SDR数据接入接口"
+        label: "描述"
+
+      # ---------- SDR Message ----------
+      - name: message
+        type: ReferenceField
+        required: true
+        description: "SDR Message"
+        refModelAllowed: ["SdrMessage"]
+        example: "SdrMessage.iq-data"
+        label: "Message"
+        placeholder: "如 SdrMessage.iq-data"
+
+      # ---------- 方向 ----------
+      - name: direction
+        type: EnumField
+        required: true
+        description: "方向"
+        enum:
+          - "IN"
+          - "OUT"
+        example: "IN"
+        label: "方向"
+        options:
+          - "接收"
+          - "发送"

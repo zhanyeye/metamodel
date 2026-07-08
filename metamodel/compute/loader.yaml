@@ -1,0 +1,97 @@
+# ============================================
+# Loader 任务元模型 (LoaderTask)
+# 版本: 1.0.0
+# 描述: 从Kafka消费数据，按定义的逻辑写入多级存储或StarRocks
+# ============================================
+models:
+  - modelType: "LoaderTask"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "Loader任务元模型，从Kafka消费数据写入多级存储或StarRocks"
+
+    fields:
+      # ---------- 任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "LoaderTask.{name}"
+        description: "任务ID，自动生成"
+        label: "任务ID"
+        help: "格式: LoaderTask.{name}，自动生成"
+
+      # ---------- 任务名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "任务名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-kafka-to-multi"
+        label: "任务名称"
+        placeholder: "如 bw-kafka-to-multi"
+        help: "任务的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 任务描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "任务描述"
+        maxLength: 500
+        example: "从Kafka消费带宽原始数据，写入多级存储"
+        label: "描述"
+        placeholder: "请输入任务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该任务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该任务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ========== 输入定义 ==========
+      - name: inputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 50
+        description: "输入数据源列表"
+        label: "输入"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用已定义的数据源ID，Loader只支持KafakTopic作为输入"
+              label: "数据源ID"
+              placeholder: "如 KafkaTopic.bw-raw"
+              refModelAllowed: [ "KafkaTopic" ]
+              help: "引用已定义的数据源"
+
+      # ========== 输出定义 ==========
+      - name: outputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 20
+        description: "输出目标列表"
+        label: "输出"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用已定义的数据源ID，Loader只支持输出到StarRocksDW或StarRocksTable"
+              label: "数据源ID"
+              placeholder: "如 StarRocksTable.bw-raw"
+              refModelAllowed: [ "StarRocksDW", "StarRocksTable" ]
+              help: "引用已定义的数据源"

@@ -1,0 +1,58 @@
+# ============================================
+# 消息Schema元模型 (Message)
+# 版本: 1.0.0
+# 描述: 定义消息的结构和字段，用于Kafka等场景
+# ============================================
+models:
+  - modelType: "Message"
+    version: 1.0.0
+    description: "消息元模型，定义消息的结构和字段"
+
+    fields:
+      # ---------- 消息ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Message.{name}"
+        label: "消息ID"
+        help: "格式: Message.{name}，自动生成"
+
+      # ---------- 消息名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        default: ""
+        pattern: "^[a-zA-Z0-9_-]+$"
+        label: "消息名称"
+        help: "消息的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 消息id（消息里携带的）----------
+      - name: msgId
+        type: IntegerField
+        required: true
+        label: "消息ID（数字）"
+
+      # ---------- 消息描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        label: "特性"
+        help: "选择该消息支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 字段定义 ----------
+      - name: elements
+        $ref: "message_components.yaml#/components/msgFields"

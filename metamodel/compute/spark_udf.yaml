@@ -1,0 +1,108 @@
+# ============================================
+# SparkUDF 元模型 (SparkUDF)
+# 版本: 1.0.0
+# 描述: 用户自定义函数定义，供Spark SQL等任务引用
+# ============================================
+models:
+  - modelType: "SparkUDF"
+    version: 1.0.0
+    description: "用户自定义的Spark函数定义"
+
+    fields:
+      # ---------- SparkUDF ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "SparkUDF.{name}"
+        label: "SparkUDF ID"
+        help: "格式: SparkUDF.{name}，自动生成"
+
+      # ---------- UDF名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "UDF名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        label: "UDF名称"
+        help: "SQL中使用的函数名"
+        unique: true
+
+      # ---------- 函数类型 ----------
+      - name: functionType
+        type: EnumField
+        required: true
+        description: "函数类型"
+        enum:
+          - "UDF"
+          - "UDTF"
+          - "UDAF"
+        example: "UDF"
+        label: "函数类型"
+        options:
+          - "标量函数（一进一出）"
+          - "表值函数（一进多出）"
+          - "聚合函数（多进一出）"
+        help: "选择UDF的类型"
+
+      # ---------- 函数描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "函数描述"
+
+      # ---------- 输入参数 ----------
+      - name: inputParams
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 20
+        items:
+          type: ComplexType
+          fields:
+            - name: type
+              type: StringField
+              required: true
+              description: "参数类型"
+              label: "参数类型"
+              maxLength: 50
+
+            - name: description
+              type: StringField
+              required: false
+              maxLength: 200
+              label: "参数描述"
+        label: "输入参数列表"
+
+      # ---------- 返回值 ----------
+      - name: returnType
+        type: StringField
+        required: true
+        description: "返回值类型"
+        example: "BIGINT"
+        label: "返回值类型"
+        placeholder: "如 BIGINT"
+        help: "函数返回的数据类型"
+        maxLength: 50
+
+      # ---------- JAR包路径 ----------
+      - name: jarPath
+        type: StringField
+        required: true
+        description: "JAR包HDFS路径"
+        example: "hdfs:///flink/udfs/bw-processor-1.0.0.jar"
+        label: "JAR路径"
+        placeholder: "如 hdfs:///flink/udfs/bw-processor-1.0.0.jar"
+        help: "UDF实现的JAR包在HDFS上的路径"
+        maxLength: 500
+
+      - name: className
+        type: StringField
+        required: true
+        description: "全限定类名"
+        example: "com.example.udf.BandwidthProcessor"
+        label: "类名"
+        placeholder: "如 com.example.udf.BandwidthProcessor"
+        help: "实现UDF的Java类全名"
+        maxLength: 200

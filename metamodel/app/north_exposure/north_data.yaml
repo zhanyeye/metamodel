@@ -1,0 +1,122 @@
+# ============================================
+# 北向开放的数据定义 元模型 (NorthData)
+# 版本: 1.0.0
+# 描述: 北向开放数据元模型
+# ============================================
+models:
+  - modelType: "NorthData"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "北向开放数据元模型"
+
+    fields:
+      # ---------- ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "NorthData.{name}"
+        description: "全局唯一标识，自动生成"
+        label: "Topic ID"
+        help: "格式: NorthData.{name}，自动生成"
+
+      # ---------- 数据名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "北向数据名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-raw"
+        label: "北向数据名称"
+        placeholder: "如 bw-raw"
+        help: "北向开放数据名称，全局唯一"
+        unique: true
+
+      # ---------- 数据描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "数据描述"
+        maxLength: 500
+        example: "提供给孪生的体验单据"
+        label: "描述"
+        placeholder: "请输入数据描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该数据支持的业务特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-monitor", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该数据支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+        # ---------- 字段定义 ----------
+      - name: fields
+        type: ArrayField
+        required: false
+        description: "消息字段定义列表"
+        minItems: 0
+        maxItems: 1000
+        label: "字段列表"
+        help: "定义消息包含的所有字段"
+        items:
+          type: ComplexType
+          label: "字段"
+          fields:
+            # ---------- 字段名 ----------
+            - name: fieldName
+              type: StringField
+              required: true
+              description: "字段名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "device_id"
+              label: "字段名"
+              placeholder: "如 device_id"
+              help: "北向使用的字段名"
+              unique: true
+
+            - name: maxLength
+              type: IntegerField
+              required: true
+              description: "字段最大长度"
+              minimum: 1
+              example: 500
+              label: "字段最大长度"
+              unit: "字节"
+              help: "字段最大长度，超过会截断"
+
+            # ---------- 字段描述 ----------
+            - name: description
+              type: StringField
+              required: false
+              description: "字段的业务描述"
+              maxLength: 200
+              example: "设备唯一标识符"
+              label: "描述"
+              placeholder: "字段的业务含义"
+
+            # ---------- 示例值 ----------
+            - name: example
+              type: StringField
+              required: false
+              description: "字段值的示例"
+              example: "device-12345"
+              label: "示例值"
+              placeholder: "如 device-12345"
+
+
+      # ---------- 文档说明 ----------
+      - name: doc
+        type: StringField
+        required: false
+        description: "接口文档说明或路径"
+        example: "带宽测量数据模型"
+        label: "文档"
+        placeholder: "接口文档路径或说明"
+        maxLength: 500

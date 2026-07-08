@@ -1,0 +1,53 @@
+# ============================================
+# Action定义元模型 (Action)
+# 版本: 1.0.0
+# 描述: Action定义，包含定制点引用
+# ============================================
+components:
+  action:
+    type: ComplexField
+    description: "Action定义，包含定制点引用"
+
+    fields:
+      # ---------- Action ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Action.{name}"
+        description: "Action ID，自动生成"
+        label: "Action ID"
+        help: "格式: Action.{name}，自动生成"
+
+      # ---------- Action名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "Action名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "getUserFromCache"
+        label: "Action名称"
+        placeholder: "如 getUserFromCache"
+        unique: true
+        maxLength: 100
+
+      # ---------- Action描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "Action描述"
+        maxLength: 200
+        example: "从缓存获取用户"
+        label: "描述"
+        placeholder: "请输入Action描述"
+
+      # ---------- 定制点列表 ----------
+      - name: customizationPoints
+        type: ArrayField
+        required: false
+        description: "定制点列表"
+        label: "定制点"
+        items:
+          $ref: "customization_point.yaml#/components/CustomizationPoint"
+        minItems: 0
+        maxItems: 50

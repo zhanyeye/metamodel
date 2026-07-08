@@ -1,0 +1,40 @@
+# ============================================
+# 可复用的消息信元
+# 版本: 1.0.0
+# 描述: 可复用的消息信元
+# ============================================
+models:
+  - modelType: "MsgCommonField"
+    version: 1.0.0
+    description: "消息可复用信元元模型"
+
+    fields:
+      # ---------- Message Component ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "MsgCommonField.{name}"
+        label: "MsgCommonField ID"
+        help: "格式: MsgCommonField.{name}，自动生成"
+
+      # ---------- MsgCommonField名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        default: ""
+        pattern: "^[a-zA-Z0-9_-]+$"
+        label: "MsgCommonField名称"
+        help: "MsgCommonField的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 消息描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "描述"
+
+      # ---------- 字段定义 ----------
+      - name: field
+        $ref: "message_components.yaml#/components/msgField"

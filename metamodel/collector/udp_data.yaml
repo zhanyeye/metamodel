@@ -1,0 +1,254 @@
+# UDP数据接入元模型
+# 版本: 1.0.0
+# 描述: UDP接入数据的格式定义
+models:
+  - modelType: "UdpCollectData"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "UDP接入数据的格式定义"
+
+    fields:
+      # ========== 消息整体元信息 ==========
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "UdpCollectData.{name}"
+        description: "数据ID，自动生成"
+        label: "数据ID"
+        help: "格式: UdpCollectData.{name}，自动生成"
+
+      - name: name
+        type: StringField
+        required: true
+        description: "消息名称"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "mbb_ufdr"
+        label: "消息名称"
+        help: "消息名称"
+
+      - name: type
+        type: IntegerField
+        required: true
+        description: "消息类型标识"
+        example: 1
+        label: "消息类型ID"
+        help: "该消息的全局类型标识"
+
+      - name: message
+        type: ReferenceField
+        required: true
+        description: "消息Schema ID"
+        refModelAllowed: [ "Message" ]
+        example: "Message.bandwidth-measurement"
+        label: "消息Schema"
+        placeholder: "如 Message.bandwidth-measurement"
+        help: "选择该Topic使用的消息Schema"
+
+      - name: endian
+        type: EnumField
+        required: true
+        description: "字节序（端序）"
+        enum:
+          - big
+          - little
+        example: "big"
+        label: "字节序"
+        options:
+          - "大端序（高位字节在前）"
+          - "小端序（低位字节在前）"
+        help: "消息数据编码的字节序，该消息固定为大端序"
+
+      - name: content
+        type: ComplexType
+        required: true
+        description: "消息字段"
+        fields:
+          - name: mandatory
+            type: ArrayField
+            required: false
+            description: "消息顶层必选字段列表"
+            items:
+              $ref: "#/components/dataField"
+            label: "顶层必选字段"
+
+          - name: optional
+            type: ArrayField
+            required: false
+            description: "消息顶层可选字段列表"
+            items:
+              $ref: "#/components/dataField"
+            label: "顶层可选字段"
+
+components:
+  dataField:
+    type: ComplexField
+    fields:
+      - name: name
+        type: StringField
+        required: true
+        label: "字段名"
+      - name: presence
+        type: StringField
+        required: false
+        label: "依赖的字段"
+      - name: skip
+        type: BooleanField
+        required: false
+        default: false
+        label: "是否忽略"
+      - name: repeated
+        type: BooleanField
+        required: false
+        default: false
+        label: "是否是数组"
+      - name: type
+        type: EnumField
+        required: true
+        label: "字段类型"
+        enum:
+          - COMBO
+          - BYTES
+          - UINT64
+          - UINT32
+          - UINT16
+          - UINT8
+          - BIT
+      - name: combo
+        dependsOn: "{type}==COMBO"
+        $ref: "#/components/comboField"
+      - name: bytes
+        dependsOn: "{type}==BYTES"
+        $ref: "#/components/bytesField"
+      - name: uint64
+        dependsOn: "{type}==UINT64"
+        $ref: "#/components/uint64Field"
+      - name: uint32
+        dependsOn: "{type}==UINT32"
+        $ref: "#/components/uint32Field"
+      - name: uint16
+        dependsOn: "{type}==UINT16"
+        $ref: "#/components/uint16Field"
+      - name: uint8
+        dependsOn: "{type}==UINT8"
+        $ref: "#/components/uint8Field"
+      - name: bit
+        dependsOn: "{type}==BIT"
+        $ref: "#/components/bitField"
+
+  comboField:
+    type: ComplexField
+    fields:
+      - name: format
+        type: EnumField
+        required: false
+        label: "编码格式"
+        enum:
+          - TLV
+          - V
+        default: TLV
+      - name: iei
+        type: IntegerField
+        required: false
+        minimum: 0
+        label: "iei"
+        dependsOn: "{format}==TLV"
+      - name: length
+        type: IntegerField
+        required: false
+        minimum: 1
+        label: "长度"
+        dependsOn: "{format}==V"
+      - name: mandatory
+        type: ArrayField
+        required: false
+        label: "必选字段"
+        items:
+          $ref: "#/components/dataField"
+      - name: optional
+        type: ArrayField
+        required: false
+        label: "可选字段"
+        items:
+          $ref: "#/components/dataField"
+
+  bytesField:
+    type: ComplexField
+    fields:
+      - name: format
+        type: EnumField
+        required: true
+        label: "编码格式"
+        enum:
+          - V
+          - LV
+          - LLV
+      - name: lengthType
+        type: EnumField
+        required: false
+        label: "长度类型"
+        enum:
+          - INTEGER
+          - OTHER_FIELD
+        options:
+          - 数字
+          - 其它字段
+        default: INTEGER
+        dependsOn: "{format}==V"
+      - name: length
+        type: IntegerField
+        required: false
+        label: "长度"
+        minimum: 0
+        dependsOn: "{lengthType}==INTEGER"
+      - name: lengthFromFields
+        type: ArrayField
+        required: false
+        label: "长度来自字段"
+        dependsOn: "{lengthType}==OTHER_FIELD"
+        items:
+          type: StringField
+
+  uint64Field:
+    type: ComplexField
+    fields:
+      - name: invalid
+        type: StringField
+        required: false
+        label: "非法值"
+
+  uint32Field:
+    type: ComplexField
+    fields:
+      - name: invalid
+        type: StringField
+        required: false
+        label: "非法值"
+
+  uint16Field:
+    type: ComplexField
+    fields:
+      - name: invalid
+        type: StringField
+        required: false
+        label: "非法值"
+
+  uint8Field:
+    type: ComplexField
+    fields:
+      - name: invalid
+        type: StringField
+        required: false
+        label: "非法值"
+
+  bitField:
+    type: ComplexField
+    fields:
+      - name: length
+        type: IntegerField
+        required: true
+        label: "长度"
+      - name: mask
+        type: IntegerField
+        required: true
+        label: "掩码"

@@ -1,0 +1,65 @@
+# ============================================
+# 流程定义元模型 (Process)
+# 版本: 1.0.0
+# 描述: 流程定义，包含Action引用
+# ============================================
+components:
+  process:
+    type: ComplexField
+    description: "流程定义，包含Action引用"
+
+    fields:
+      # ---------- 流程ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Process.{name}"
+        description: "流程ID，自动生成"
+        label: "流程ID"
+        help: "格式: Process.{name}，自动生成"
+
+      # ---------- 流程名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "流程名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "getUserProfileProcess"
+        label: "流程名称"
+        placeholder: "如 getUserProfileProcess"
+        unique: true
+        maxLength: 100
+
+      # ---------- 流程描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "流程描述"
+        maxLength: 500
+        example: "获取用户资料流程"
+        label: "描述"
+        placeholder: "请输入流程描述"
+
+      # ---------- 流程定义 ----------
+      - name: definition
+        type: StringField
+        required: true
+        description: "流程定义（transDSL）"
+        format: multiline
+        label: "流程定义"
+        placeholder: "输入transDSL流程定义"
+        help: "使用transDSL定义流程"
+        maxLength: 50000
+
+      # ---------- Action列表 ----------
+      - name: actions
+        type: ArrayField
+        required: true
+        description: "Action列表"
+        label: "Action列表"
+        minItems: 1
+        maxItems: 100
+        items:
+          $ref: "action.yaml#/components/action"
+        help: "流程中使用的Action"

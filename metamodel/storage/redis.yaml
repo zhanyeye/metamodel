@@ -1,0 +1,346 @@
+# ============================================
+# Redis 数据模型元模型 (Redis)
+# 版本: 1.0.0
+# 描述: Redis 数据建模元模型，支持 Hash 和 List 两种数据结构
+# ============================================
+models:
+  - modelType: "Redis"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "Redis数据建模元模型（支持Hash和List）"
+
+    fields:
+      # ---------- Redis模型ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Redis.{name}"
+        description: "Redis模型ID，自动生成"
+        label: "模型ID"
+        help: "格式: Redis.{name}，自动生成"
+
+      # ---------- 模型名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "模型名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "user-profile"
+        label: "模型名称"
+        placeholder: "如 user-profile"
+        help: "模型的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 模型描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "模型描述"
+        maxLength: 500
+        example: "用户资料缓存模型"
+        label: "描述"
+        placeholder: "请输入模型描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该模型用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.user-profile", "Feature.user-cache"]
+        label: "特性"
+        help: "选择该模型支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "该模型所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该模型所属的数据分层"
+
+      # ---------- 数据结构类型 ----------
+      - name: dataType
+        type: EnumField
+        required: true
+        description: "Redis数据结构类型"
+        enum:
+          - HASH
+          - LIST
+        example: "HASH"
+        label: "数据结构"
+        options:
+          - "Hash - 适合存储对象"
+          - "List - 适合存储有序集合"
+        help: "选择Redis数据结构"
+
+      # ---------- Key配置 ----------
+      - name: keyPattern
+        type: StringField
+        required: true
+        description: "Key命名模式，支持变量占位符"
+        pattern: "^[a-zA-Z0-9_\\-{}:]+$"
+        example: "user:{userId}"
+        label: "Key模式"
+        placeholder: "user:{userId}"
+        help: "使用 {变量名} 作为占位符，如 user:{userId}"
+        maxLength: 200
+
+      - name: keyExample
+        type: StringField
+        required: false
+        description: "Key示例"
+        example: "user:1001"
+        label: "Key示例"
+        placeholder: "如 user:1001"
+        maxLength: 200
+
+      - name: ttl
+        type: IntegerField
+        required: false
+        description: "过期时间（秒），-1表示永不过期"
+        minimum: -1
+        default: -1
+        example: 3600
+        label: "过期时间"
+        unit: "秒"
+        help: "数据在Redis中的存活时间"
+
+      # ---------- HASH类型专用配置 ----------
+      - name: hashFields
+        type: ArrayField
+        required: false
+        description: "Hash字段定义（仅HASH类型使用）"
+        label: "字段列表"
+        minItems: 0
+        maxItems: 1000
+        dependsOn: "{dataType}==HASH"
+        items:
+          type: ComplexType
+          label: "字段"
+          fields:
+            - name: fieldId
+              type: IntegerField
+              required: true
+              description: "字段ID"
+              minimum: 1
+              maximum: 65535
+              example: 1001
+              label: "字段ID"
+              placeholder: "如 1001"
+              help: "字段的数字标识"
+
+            - name: fieldName
+              type: StringField
+              required: true
+              description: "字段名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "name"
+              label: "字段名"
+              placeholder: "如 name"
+              help: "Hash中的字段名"
+              maxLength: 100
+
+            - name: valueType
+              type: EnumField
+              required: true
+              description: "值类型"
+              enum:
+                - string
+                - integer
+                - float
+                - boolean
+                - json
+                - pb
+              example: "string"
+              label: "值类型"
+              options:
+                - "字符串"
+                - "整数"
+                - "浮点数"
+                - "布尔值"
+                - "JSON对象"
+                - "Protocol Buffers"
+              help: "字段值的数据类型"
+
+            - name: description
+              type: StringField
+              required: false
+              description: "字段描述"
+              maxLength: 200
+              example: "用户姓名"
+              label: "描述"
+              placeholder: "字段的业务含义"
+
+            - name: isRequired
+              type: BooleanField
+              required: false
+              description: "是否必填"
+              default: false
+              example: true
+              label: "必填"
+              help: "写入时是否必须包含此字段"
+
+            - name: example
+              type: StringField
+              required: false
+              description: "示例值"
+              example: "张三"
+              label: "示例值"
+              placeholder: "如 张三"
+              maxLength: 500
+
+            # 复杂类型的引用定义
+            - name: schemaId
+              type: ReferenceField
+              required: false
+              description: "当valueType=json或pb时，引用外部定义的Schema"
+              refModelAllowed: ["Message"]
+              example: "Message.user-profile"
+              label: "Schema ID"
+              placeholder: "如 Message.user-profile"
+              dependsOn: "{valueType}==json||{valueType}==pb"
+              help: "引用预先定义的JSON Schema或Proto定义"
+
+      # ---------- LIST类型专用配置 ----------
+      - name: listProperties
+        type: ComplexType
+        required: false
+        description: "列表特性定义（仅LIST类型使用）"
+        label: "列表配置"
+        dependsOn: "{dataType}==LIST"
+        fields:
+          - name: maxLength
+            type: IntegerField
+            required: false
+            description: "最大长度限制"
+            minimum: 1
+            maximum: 1000000
+            example: 1000
+            label: "最大长度"
+            unit: "条"
+            help: "列表最多可存储的元素数量"
+
+          - name: accessPattern
+            type: EnumField
+            required: false
+            description: "访问模式"
+            enum:
+              - FIFO
+              - LIFO
+              - CAPACITY
+              - RELIABLE
+            default: "FIFO"
+            example: "FIFO"
+            label: "访问模式"
+            options:
+              - "队列 - RPUSH + LPOP"
+              - "栈 - LPUSH + LPOP"
+              - "定长列表 - LPUSH + LTRIM"
+              - "可靠队列 - RPOPLPUSH"
+            help: "列表的访问模式决定使用哪些Redis命令"
+
+          - name: elementType
+            type: EnumField
+            required: true
+            description: "列表元素类型"
+            enum:
+              - string
+              - integer
+              - float
+              - json
+              - pb
+            example: "json"
+            label: "元素类型"
+            options:
+              - "字符串"
+              - "整数"
+              - "浮点数"
+              - "JSON对象"
+              - "Protocol Buffers"
+            help: "列表中元素的类型"
+
+          - name: schemaId
+            type: ReferenceField
+            required: false
+            description: "当elementType=json或pb时，引用外部定义的Schema"
+            refModelAllowed: ["Message"]
+            example: "Message.task-message"
+            label: "Schema ID"
+            placeholder: "如 Message.task-message"
+            dependsOn: "{elementType}==json||{elementType}==pb"
+            help: "引用预先定义的JSON Schema或Proto定义"
+
+      # ---------- 二级索引配置 ----------
+      - name: indexes
+        type: ArrayField
+        required: false
+        description: "二级索引定义"
+        label: "索引"
+        minItems: 0
+        maxItems: 20
+        items:
+          type: ComplexType
+          label: "索引"
+          fields:
+            - name: indexName
+              type: StringField
+              required: true
+              description: "索引名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "idx_user_by_email"
+              label: "索引名"
+              placeholder: "如 idx_user_by_email"
+              maxLength: 100
+
+            - name: indexKey
+              type: StringField
+              required: true
+              description: "索引Key"
+              example: "user:email:index"
+              label: "索引Key"
+              placeholder: "如 user:email:index"
+              help: "Redis中存储索引的Key"
+              maxLength: 200
+
+            - name: fieldName
+              type: StringField
+              required: true
+              description: "被索引的字段名"
+              example: "email"
+              label: "索引字段"
+              placeholder: "如 email"
+              help: "必须是fields中定义的字段名"
+              maxLength: 100
+
+            - name: indexType
+              type: EnumField
+              required: true
+              description: "索引类型"
+              enum:
+                - SET
+                - ZSET
+              example: "SET"
+              label: "索引类型"
+              options:
+                - "SET - 无序集合"
+                - "ZSET - 有序集合"
+              help: "SET用于等值查询，ZSET用于范围查询"
+
+            - name: scoreField
+              type: StringField
+              required: false
+              description: "用作分数的字段（ZSET专用）"
+              example: "createTime"
+              label: "分数字段"
+              placeholder: "如 createTime"
+              dependsOn: "{indexType}==ZSET"
+              help: "用于排序的数值字段"

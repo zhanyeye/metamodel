@@ -1,0 +1,258 @@
+# ============================================
+# DW 计算任务元模型 (DWComputeJob)
+# 版本: 2.0.0
+# 描述: 数据仓库计算任务建模，基于基础任务自动生成多维度计算任务
+# ============================================
+models:
+  - modelType: "DWComputeJob"
+    extends: "ComputeNode"
+    version: 2.0.0
+    description: "数据仓库计算任务建模，定义多维度计算任务模板"
+
+    fields:
+      # ---------- 计算任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "DWComputeJob.{name}"
+        description: "DW计算任务ID，自动生成"
+        label: "任务ID"
+        help: "格式: DWComputeJob.{name}，自动生成"
+
+      # ---------- 任务名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "DW计算任务名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "network-coverage-dw"
+        label: "任务名称"
+        placeholder: "如 network-coverage-dw"
+        help: "DW计算任务的唯一名称"
+        unique: true
+
+      # ---------- 任务描述 ----------
+      - name: description
+        type: StringField
+        required: true
+        description: "DW计算任务的业务描述"
+        maxLength: 500
+        example: "网络覆盖数据仓库的多维度计算任务"
+        label: "描述"
+        placeholder: "请输入DW任务的详细描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该任务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该DW任务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ========== 基础计算逻辑（最细粒度）==========
+      - name: baseSql
+        type: ComplexType
+        required: true
+        description: "SQL计算逻辑"
+        label: "SQL"
+        fields:
+          - name: content
+            type: StringField
+            required: true
+            description: "SQL内容"
+            format: multiline
+            example: |
+              INSERT INTO bw_daily_agg
+              SELECT 
+                device_id,
+                DATE_FORMAT(event_time, 'yyyy-MM-dd') as ds,
+                SUM(bw_value) as total_bw
+              FROM bw_raw
+              GROUP BY device_id, DATE_FORMAT(event_time, 'yyyy-MM-dd')
+            label: "SQL内容"
+            placeholder: "输入SQL语句"
+            help: "完整的SQL逻辑，包括INSERT、CREATE VIEW等"
+            maxLength: 50000
+
+      # ========== 各表的计算方式 ==========
+      - name: tableCalculations
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 100
+        description: "各表的计算方式"
+        label: "表计算"
+        items:
+          type: ComplexType
+          fields:
+            - name: tableName
+              type: StringField
+              required: true
+              description: "表名（必须在DW的tables中）"
+              example: "bw_daily_cell"
+              label: "表名"
+              placeholder: "如 bw_daily_cell"
+              help: "StarRocksDW中定义的自动生成表名"
+
+            - name: calculationType
+              type: EnumField
+              required: true
+              description: "计算方式"
+              enum:
+                - "INDEPENDENT"
+                - "CONVOLVE"
+              example: "INDEPENDENT"
+              label: "计算方式"
+              options:
+                - "独立计算"
+                - "从子节点表卷积"
+              help: "选择如何计算该表的数据"
+
+            # ---------- groupBy ----------
+            - name: groupBy
+              type: ArrayField
+              required: false
+              description: "GROUP BY字段（不指定则用表的维度列表）"
+              items:
+                type: StringField
+              example: ["province", "city"]
+              label: "分组字段"
+              placeholder: "输入字段名后回车"
+              minItems: 0
+              maxItems: 20
+              help: "指定聚合的分组字段"
+
+            # ---------- 卷积计算 ----------
+            - name: sourceTable
+              type: StringField
+              required: false
+              description: "源表（卷积时使用）"
+              example: "bw_daily_cell"
+              label: "源表"
+              placeholder: "输入表名后回车"
+              dependsOn: "{calculationType}==CONVOLVE"
+              help: "选择要卷积的源表"
+
+            - name: customSQL
+              type: StringField
+              required: false
+              description: "自定义SQL（覆盖默认生成的SQL）"
+              format: multiline
+              example: |
+                SELECT 
+                  province,
+                  SUM(total_bw) as total_bw
+                FROM bw_daily_cell
+                GROUP BY province
+              label: "自定义SQL"
+              placeholder: "输入自定义SQL"
+              help: "不填则根据维度关系自动生成"
+              maxLength: 10000
+
+            - name: engine
+              type: StringField
+              required: true
+              description: "计算引擎"
+              enum: [ "FLINK", "SPARK" ]
+              example: "FLINK"
+              label: "引擎"
+
+            - name: flinkConf
+              type: ComplexType
+              required: false
+              description: "Flink任务配置"
+              label: "Flink任务配置"
+              fields:
+                # ========== 维表定义 ==========
+                - name: dimensionTables
+                  $ref: "#/components/dimensionTables"
+
+                # ========== 使用的UDF列表 ==========
+                - name: udfs
+                  $ref: "#/components/udfs"
+
+                # ========== 执行模式 ==========
+                - name: executionType
+                  $ref: "#/components/executionType"
+
+                # ========== 资源规格 ==========
+                - name: resources
+                  $ref: "#/components/resources"
+
+                # ========== 状态后端配置 ==========
+                - name: stateBackend
+                  $ref: "#/components/stateBackend"
+
+                # ========== Checkpoint配置 ==========
+                - name: checkpoint
+                  $ref: "#/components/checkpoint"
+
+                # ========== 重启策略 ==========
+                - name: restartStrategy
+                  $ref: "#/components/restartStrategy"
+
+                # ========== 调度配置（仅BATCH模式）==========
+                - name: schedule
+                  required: false
+                  label: "调度"
+                  $ref: "#/components/schedule"
+
+                # ========== 自定义参数 ==========
+                - name: customParameters
+                  $ref: "#/components/customParameters"
+              dependsOn: "{engine}==FLINK"
+
+            - name: sparkConf
+              type: ComplexType
+              required: false
+              description: "Spark任务配置"
+              label: "Spark任务配置"
+              fields:
+                # ========== 维表定义 ==========
+                - name: dimensionTables
+                  $ref: "#/components/dimensionTables"
+
+                # ========== 使用的UDF列表 ==========
+                - name: udfs
+                  $ref: "#/components/udfs"
+
+                # ========== SQL定义 ==========
+                - name: sql
+                  $ref: "#/components/sql"
+
+                # ========== 资源规格 ==========
+                - name: resources
+                  $ref: "#/components/resources"
+
+                # ========== Spark配置 ==========
+                - name: sparkConfig
+                  $ref: "#/components/sparkConfig"
+
+                # ========== 调度配置 ==========
+                - name: schedule
+                  required: false
+                  label: "调度"
+                  $ref: "#/components/schedule"
+
+                # ========== 自定义参数 ==========
+                - name: customParameters
+                  $ref: "#/components/customParameters"
+              dependsOn: "{engine}==SPARK"
+
+      # ========== 计算任务列表（自动生成）==========
+      - name: generatedJobs
+        type: ArrayField
+        required: false
+        description: "计算任务列表（系统根据配置自动生成）"
+        generated: true
+        label: "生成的F任务"
+        items:
+          type: ReferenceField
+          refModelAllowed: [ "FlinkSQLJob", "SparkSQLJob" ]

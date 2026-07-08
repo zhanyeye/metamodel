@@ -1,0 +1,65 @@
+# ============================================
+# SDR Message 元模型 (SdrMessage)
+# 版本: 1.0.0
+# 描述: SDR Message元模型。为什么不用SdrTopic，而是SdrMessage，因为在分层架构中，底层服务如DDM，提供数据采集能力，不会因为上层消费者增加或数据类型增肌而改变。
+# 而SDR Topic是需要下策略的，所以DDM的采集请求及数据Notify的SDR Topic只能是固定的，所以会承载多种数据，所以这里需要定义具体数据，而非笼统的SDR Topic
+# ============================================
+models:
+  - modelType: "SdrMessage"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "SDR Message元模型"
+
+    fields:
+      # ---------- Message ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "SdrMessage.{topicName}.{schemaId}"
+        description: "全局唯一标识，自动生成"
+        label: "ID"
+        help: "格式: SdrMessage.{topicName}.{schemaId}，自动生成"
+
+      # ---------- Topic名称（唯一标识）----------
+      - name: topicName
+        type: StringField
+        required: true
+        description: "SDR Topic名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "iq-data"
+        label: "Topic名称"
+        placeholder: "如 iq-data"
+        help: "SDR Topic名称"
+        unique: true
+
+      # ---------- SDR Topic值 ----------
+      - name: topicValue
+        type: IntegerField
+        required: true
+        description: "SDR Topic值"
+        example: 1000
+        label: "SDR Topic值"
+        placeholder: "请输入SDR Topic数值"
+        help: "SDR Topic的数值标识"
+
+      # ---------- 消息Schema ----------
+      - name: schemaId
+        type: ReferenceField
+        required: true
+        description: "消息Schema ID"
+        refModelAllowed: [ "Message" ]
+        example: "Message.iq-data-v1"
+        label: "消息Schema"
+        placeholder: "如 Message.iq-data-v1"
+        help: "选择该Topic使用的消息Schema"
+
+      # ---------- SdrMessage描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "SdrMessage业务描述"
+        maxLength: 500
+        example: "IQ原始数据流"
+        label: "描述"
+        placeholder: "请输入SdrMessage的业务描述"

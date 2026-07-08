@@ -1,0 +1,52 @@
+# ============================================
+# 数据领域元模型 (Domain)
+# 版本: 1.0.0
+# 描述: 定义数据所属的业务领域
+# ============================================
+models:
+  - modelType: "Domain"
+    version: 1.0.0
+    description: "数据领域定义"
+
+    fields:
+      # ---------- 领域ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Domain.{code}"
+        description: "领域ID，自动生成"
+        label: "领域ID"
+        help: "格式: Domain.{code}，自动生成"
+
+      # ---------- 领域代码（唯一标识）----------
+      - name: code
+        type: StringField
+        required: true
+        description: "领域代码，用于程序中引用，全局唯一"
+        pattern: "^[a-z][a-z0-9_-]*$"
+        example: "network"
+        label: "领域代码"
+        placeholder: "如 network"
+        help: "小写字母开头，如 network、user、order"
+        unique: true
+
+      # ---------- 领域名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        description: "领域名称"
+        example: "网络域"
+        label: "名称"
+        placeholder: "如 网络域"
+
+      # ---------- 领域描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "领域描述"
+        maxLength: 500
+        example: "网络相关的数据，包括带宽、流量、设备等"
+        label: "描述"
+        placeholder: "请输入领域描述"
+      

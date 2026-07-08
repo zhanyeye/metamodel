@@ -1,0 +1,51 @@
+# ============================================
+# 特性元模型 (Feature)
+# 版本: 1.0.0
+# 描述: 定义业务特性，供其他元模型引用
+# ============================================
+models:
+  - modelType: "Feature"
+    version: 1.0.0
+    description: "业务特性定义"
+
+    fields:
+      # ---------- 特性ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Feature.{code}"
+        description: "特性ID，自动生成"
+        label: "特性ID"
+        help: "格式: Feature.{code}，自动生成"
+
+      # ---------- 特性代码（唯一标识）----------
+      - name: code
+        type: StringField
+        required: true
+        description: "特性代码，用于程序中引用，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "realtime-monitor"
+        label: "特性代码"
+        placeholder: "如 realtime-monitor"
+        help: "特性代码，如 realtime-monitor、offline-analysis"
+        unique: true
+
+      # ---------- 特性名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        description: "特性名称"
+        example: "实时监控"
+        label: "名称"
+        placeholder: "如 实时监控"
+
+      # ---------- 特性描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "特性描述"
+        maxLength: 500
+        example: "实时监控带宽数据，延迟小于1秒"
+        label: "描述"
+        placeholder: "请输入特性描述"

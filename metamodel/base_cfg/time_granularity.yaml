@@ -1,0 +1,56 @@
+# ============================================
+# 时间粒度元模型 (TimeGranularity)
+# 版本: 1.0.0
+# 描述: 定义时间粒度，包含数值和单位，如15分钟、1天、7天等
+# ============================================
+models:
+  - modelType: "TimeGranularity"
+    version: 1.0.0
+    description: "时间粒度定义，包含数值和单位"
+
+    fields:
+      # ---------- 粒度ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "TimeGranularity.{value}"
+        description: "粒度ID，自动生成"
+        label: "粒度ID"
+        help: "格式: TimeGranularity.{value}，自动生成"
+
+      # ---------- 粒度名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        description: "粒度名称"
+        example: "15分钟"
+        label: "名称"
+        placeholder: "如 15分钟"
+
+      # ---------- 粒度描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "粒度描述"
+        maxLength: 500
+        example: "15分钟粒度数据，适用于实时监控"
+        label: "描述"
+        placeholder: "请输入粒度描述"
+
+      # ---------- 时间数值 ----------
+      - name: value
+        label: "时间粒度取值"
+        description: "时间粒度取值"
+        required: true
+        $ref: "duration.yaml#/components/duration"
+
+      # ---------- 粒度顺序 ----------
+      - name: order
+        type: IntegerField
+        required: true
+        description: "粒度顺序（数字越小越细）"
+        minimum: 1
+        example: 1
+        label: "顺序"
+        help: "用于排序，如 MIN15=1, HOUR=2, DAY=3"

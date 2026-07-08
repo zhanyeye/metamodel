@@ -1,0 +1,138 @@
+# ============================================
+# KafkaNorthUDF 元模型 (KafkaNorthUDF)
+# 版本: 1.0.0
+# 描述: 用户自定义函数定义，供kafka北向开放场景数据转换引用
+# ============================================
+models:
+  - modelType: "KafkaNorthUDF"
+    version: 1.0.0
+    description: "用户自定义kafka北向函数定义"
+
+    fields:
+      # ---------- KafkaNorthUDF ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "KafkaNorthUDF.{name}"
+        description: "KafkaNorthUDF ID，自动生成"
+        label: "KafkaNorthUDF ID"
+        help: "格式: KafkaNorthUDF.{name}，自动生成"
+
+      # ---------- UDF名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "UDF名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "bw_custom_processor"
+        label: "UDF名称"
+        placeholder: "如 bw_custom_processor"
+        help: "SFTP北向中使用的函数名"
+        unique: true
+
+      # ---------- 函数类型 ----------
+      - name: functionType
+        type: EnumField
+        required: true
+        description: "函数类型"
+        enum:
+          - "UDF"
+          - "UDTF"
+          - "UDAF"
+        example: "UDF"
+        label: "函数类型"
+        options:
+          - "标量函数"
+          - "表值函数"
+          - "聚合函数"
+        help: "选择UDF的类型"
+
+      # ---------- 函数描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "函数描述"
+        maxLength: 500
+        example: "带宽数据自定义处理器"
+        label: "描述"
+        placeholder: "请输入函数描述"
+
+      # ---------- 输入参数 ----------
+      - name: inputParams
+        type: ArrayField
+        required: true
+        description: "输入参数定义"
+        minItems: 1
+        maxItems: 20
+        items:
+          type: ComplexType
+          fields:
+            - name: name
+              type: StringField
+              required: true
+              description: "参数名"
+              example: "input"
+              label: "参数名"
+              maxLength: 50
+
+            - name: type
+              type: StringField
+              required: true
+              description: "参数类型"
+              example: "STRING"
+              label: "参数类型"
+              help: "Flink支持的数据类型"
+              maxLength: 50
+
+            - name: description
+              type: StringField
+              required: false
+              description: "参数描述"
+              maxLength: 200
+              label: "描述"
+        label: "输入参数"
+
+      # ---------- 返回值 ----------
+      - name: returnType
+        type: StringField
+        required: true
+        description: "返回值类型"
+        example: "BIGINT"
+        label: "返回值类型"
+        placeholder: "如 BIGINT"
+        help: "函数返回的数据类型"
+        maxLength: 50
+
+      # ---------- 版本信息 ----------
+      - name: version
+        type: StringField
+        required: true
+        description: "UDF版本"
+        pattern: "^\\d+\\.\\d+\\.\\d+$"
+        example: "1.0.0"
+        label: "版本"
+        placeholder: "如 1.0.0"
+
+      # ---------- 责任人 ----------
+      - name: owner
+        type: StringField
+        required: true
+        description: "责任人/团队"
+        example: "team-platform"
+        label: "责任人"
+        placeholder: "如 team-platform"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该UDF用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该UDF支持的业务特性"
+        minItems: 0
+        maxItems: 20

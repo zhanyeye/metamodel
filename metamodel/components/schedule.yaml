@@ -1,0 +1,40 @@
+# ============================================
+# 任务调度配置
+# 版本: 1.0.0
+# 描述: 任务调度配置
+# ============================================
+components:
+  schedule:
+    type: ComplexType
+    fields:
+      - name: type
+        type: EnumField
+        required: true
+        enum:
+          - FIXED_TIME
+          - INTERVAL
+          - CRON
+        options:
+          - "指定时间"
+          - "指定周期"
+          - "Cron表达式"
+
+      - name: fixedTime
+        type: StringField
+        required: false
+        label: "启动时间"
+        help: "例如2:00表示凌晨2点运行"
+        dependsOn: "{type}==FIXED_TIME"
+
+      - name: interval
+        label: "调度周期"
+        required: false
+        $ref: "duration.yaml#/components/duration"
+        dependsOn: "{type}==INTERVAL"
+
+      - name: cron
+        type: StringField
+        required: false
+        label: "Cron表达式"
+        maxLength: 100
+        dependsOn: "{type}==CRON"

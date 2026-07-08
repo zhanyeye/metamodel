@@ -1,0 +1,182 @@
+# ============================================
+# Fact定义元模型 (Fact)
+# 版本: 1.0.0
+# 描述: Fact定义，用于grule规则中的数据和操作
+# ============================================
+components:
+  fact:
+    type: ComplexField
+    description: "Fact"
+  
+    fields:
+      # ---------- Fact ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Fact.{name}"
+        description: "Fact ID，自动生成"
+        label: "Fact ID"
+        help: "格式: Fact.{name}，自动生成"
+
+      # ---------- Fact名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "Fact名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "User"
+        label: "Fact名称"
+        placeholder: "如 User"
+        help: "grule规则中使用的Fact名称"
+        unique: true
+        maxLength: 100
+
+      # ---------- Fact描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "Fact描述"
+        maxLength: 500
+        example: "用户信息Fact"
+        label: "描述"
+
+      # ---------- 字段定义 ----------
+      - name: fields
+        type: ArrayField
+        required: true
+        description: "字段定义列表"
+        label: "字段列表"
+        minItems: 1
+        maxItems: 100
+        items:
+          type: ComplexType
+          fields:
+            - name: fieldId
+              type: IntegerField
+              required: true
+              description: "字段ID"
+              minimum: 1
+              maximum: 65535
+              example: 1001
+              label: "字段ID"
+              placeholder: "如 1001"
+
+            - name: fieldName
+              type: StringField
+              required: true
+              description: "字段名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "userId"
+              label: "字段名"
+              placeholder: "如 userId"
+              maxLength: 100
+
+            - name: fieldType
+              type: EnumField
+              required: true
+              description: "字段类型"
+              enum:
+                - "string"
+                - "int"
+                - "long"
+                - "float"
+                - "double"
+                - "boolean"
+                - "date"
+                - "timestamp"
+                - "array"
+                - "map"
+              example: "string"
+              label: "字段类型"
+              options:
+                string: "字符串"
+                int: "整数"
+                long: "长整数"
+                float: "浮点数"
+                double: "双精度"
+                boolean: "布尔值"
+                date: "日期"
+                timestamp: "时间戳"
+                array: "数组"
+                map: "映射"
+
+            - name: description
+              type: StringField
+              required: false
+              description: "字段描述"
+              maxLength: 200
+              example: "用户ID"
+              label: "描述"
+
+      # ---------- 方法定义 ----------
+      - name: methods
+        type: ArrayField
+        required: false
+        description: "方法定义列表"
+        label: "方法列表"
+        minItems: 0
+        maxItems: 50
+        items:
+          type: ComplexType
+          fields:
+            - name: name
+              type: StringField
+              required: true
+              description: "方法名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "isVipUser"
+              label: "方法名"
+              placeholder: "如 isVipUser"
+              maxLength: 100
+
+            - name: description
+              type: StringField
+              required: false
+              description: "方法描述"
+              maxLength: 200
+              example: "判断用户是否为VIP"
+              label: "描述"
+
+            - name: inputs
+              type: ArrayField
+              required: false
+              description: "输入参数列表"
+              label: "输入参数"
+              minItems: 0
+              maxItems: 20
+              items:
+                type: ComplexType
+                fields:
+                  - name: name
+                    type: StringField
+                    required: true
+                    description: "参数名"
+                    pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                    example: "days"
+                    label: "参数名"
+                    maxLength: 50
+
+                  - name: type
+                    type: StringField
+                    required: true
+                    description: "参数类型"
+                    example: "int"
+                    label: "参数类型"
+                    maxLength: 50
+
+                  - name: description
+                    type: StringField
+                    required: false
+                    description: "参数描述"
+                    maxLength: 200
+                    label: "描述"
+
+            - name: output
+              type: StringField
+              required: true
+              description: "输出类型"
+              example: "boolean"
+              label: "输出类型"
+              help: "方法返回值类型"
+              maxLength: 50

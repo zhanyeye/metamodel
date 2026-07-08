@@ -1,0 +1,100 @@
+models:
+  # ========== 数据节点基类 ==========
+  - modelType: "DataNode"
+    version: 1.0.0
+    description: "数据节点基类，所有数据存储必须继承此类"
+    fields:
+      - name: id
+        type: IdField
+        generated: true
+        description: "数据节点id，整系统所有类型的模型中唯一标识"
+        template: "{modelType}.{name}"
+
+      - name: name
+        type: StringField
+        required: true
+        description: "数据节点名称，该类型的DataNode内唯一，例如KafkaTopic可以用topic id"
+        pattern: "^[a-z][a-z0-9_]*[a-z0-9]$"
+
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        description: "数据节点描述"
+
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该节点支持的业务特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-monitor", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该节点支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+  # ========== 计算节点基类 ==========
+  - modelType: "ComputeNode"
+    version: 1.0.0
+    description: "计算节点基类，所有计算任务必须继承此类"
+    fields:
+      - name: id
+        type: IdField
+        generated: true
+        description: "计算节点唯一标识"
+        template: "{modelType}.{name}"
+
+      - name: name
+        type: StringField
+        required: true
+        description: "计算节点名称"
+        pattern: "^[a-z][a-z0-9_]*[a-z0-9]$"
+
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        description: "计算节点描述"
+
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该节点支持的业务特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-monitor", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该节点支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      - name: inputs
+        type: ArrayField
+        required: false
+        minItems: 1
+        description: "输入定义列表，至少需要一个输入"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: ["DataNode"]
+
+      - name: outputs
+        type: ArrayField
+        required: false
+        minItems: 1
+        description: "输出定义列表，至少需要一个输出"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: ["DataNode"]

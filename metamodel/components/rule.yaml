@@ -1,0 +1,72 @@
+# ============================================
+# 规则定义元模型 (Rule)
+# 版本: 1.0.0
+# 描述: grule规则定义，可被多个定制点复用
+# ============================================
+components:
+  rule:
+    type: ComplexField
+    description: "grule规则定义，可被多个定制点复用"
+
+    fields:
+      # ---------- 规则ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "Rule.{name}"
+        description: "规则ID，自动生成"
+        label: "规则ID"
+        help: "格式: Rule.{name}，自动生成"
+
+      # ---------- 规则名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "规则名称，全局唯一"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        example: "goldUserCacheRule"
+        label: "规则名称"
+        placeholder: "如 goldUserCacheRule"
+        unique: true
+        maxLength: 100
+
+      # ---------- 规则描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "规则描述"
+        maxLength: 500
+        example: "黄金用户缓存策略规则"
+        label: "描述"
+
+      # ---------- grule规则 ----------
+      - name: rule
+        type: StringField
+        required: true
+        description: "grule规则"
+        format: multiline
+        example: |
+          when 
+            User.VipLevel == "gold"
+          then
+            CacheKey.Prefix = "gold:";
+            CacheKey.TTL = 3600;
+        label: "规则"
+        placeholder: "输入grule规则"
+        help: "使用grule语法定义的规则"
+        maxLength: 10000
+
+      # ---------- 适用特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "适用特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.gold-user", "Feature.long-cache"]
+        label: "适用特性"
+        help: "该规则适用的业务特性"
+        minItems: 0
+        maxItems: 20

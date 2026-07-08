@@ -1,0 +1,172 @@
+# ============================================
+# 北向开放元模型 (NorthExposure)
+# 版本: 1.0.0
+# 描述: 定义通过SFTP或Kafka向北向系统开放的数据，支持字段映射和UDF转换
+# ============================================
+models:
+  - modelType: "NorthExposure"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "北向开放任务定义，支持字段映射和UDF转换"
+
+    fields:
+      # ---------- 北向任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "NorthExposure.{name}"
+        description: "北向任务ID，自动生成"
+        help: "格式: NorthExposure.{name}，自动生成"
+
+      # ---------- 北向任务名（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "北向任务名，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-daily-report"
+        label: "sftp北向任务名"
+        placeholder: "如 bw-daily-report"
+        help: "北向开放任务的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 数据描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "任务描述"
+        maxLength: 500
+        example: "带宽日汇总数据北向开放"
+        label: "描述"
+        placeholder: "请输入任务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该任务用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.northbound-report", "Feature.customer-billing"]
+        label: "特性"
+        help: "选择该开放任务支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 开放接口类型 ----------
+      - name: interfaceTypes
+        type: ArrayField
+        required: true
+        label: "北向接口类型"
+        minItems: 1
+        items:
+          type: EnumField
+          enum:
+            - sftp
+            - kafka
+
+      # ---------- 输入 ----------
+      - name: inputs
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 1
+        description: "输入数据源Kafka Topic"
+        label: "输入的KafkaTopic（必须是同一种消息）"
+        items:
+          type: ComplexType
+          fields:
+            - name: refId
+              type: ReferenceField
+              required: true
+              description: "引用的数据节点ID"
+              refModelAllowed: [ "KafkaTopic" ]
+
+            - name: filter
+              type: StringField
+              required: false
+              description: "源端过滤条件"
+
+            - name: options
+              type: StringField
+              required: false
+              description: "读取选项"
+
+      # ========== 字段加工 ==========
+      - name: fieldsConvert
+        type: ArrayField
+        required: true
+        description: "每个字段的加工"
+        label: "字段加工"
+        minItems: 1
+        maxItems: 1000
+        items:
+          type: ComplexType
+          fields:
+            # ---------- 北向字段名 ----------
+            - name: northName
+              type: StringField
+              required: true
+              description: "北向字段名（输出到文件的字段名）"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "formatted_time"
+              label: "北向字段名"
+              placeholder: "如 formatted_time"
+              help: "输出文件中的字段名称"
+              maxLength: 100
+
+            # ---------- sftp udf函数 ----------
+            - name: sftpUdfName
+              type: ReferenceField
+              required: true
+              refModelAllowed: [ "SftpNorthUDF" ]
+              label: "Sftp North UDF"
+              # todo: 这里应该是包含sftp，待确认是否支持
+              dependsOn: "{interfaceTypes}=='sftp'"
+
+            # ---------- sftp udf 参数字符串 ----------
+            - name: sftpPara
+              type: StringField
+              required: true
+              example: "{createdTime},UTC"
+              label: "Sftp North UDF参数"
+              help: "格式: {字段名}引用Kafka字段，其他为常量，用逗号分隔"
+              maxLength: 1000
+              # todo: 这里应该是包含sftp，待确认是否支持
+              dependsOn: "{interfaceTypes}=='sftp'"
+
+            # ---------- kafka udf函数 ----------
+            - name: kafkaUdfName
+              type: ReferenceField
+              required: true
+              refModelAllowed: [ "KafkaNorthUDF" ]
+              label: "Kafka North UDF"
+              # todo: 这里应该是包含kafka，待确认是否支持
+              dependsOn: "{interfaceTypes}=='kafka'"
+
+            # ---------- kafka udf 参数字符串 ----------
+            - name: kafkaPara
+              type: StringField
+              required: true
+              example: "{createdTime},UTC"
+              label: "Kafka North UDF参数"
+              help: "格式: {字段名}引用Kafka字段，其他为常量，用逗号分隔"
+              maxLength: 1000
+              # todo: 这里应该是包含kafka，待确认是否支持
+              dependsOn: "{interfaceTypes}=='kafka'"
+
+            - name: maxLength
+              type: IntegerField
+              required: true
+              label: "最大长度"
+
+            - name: description
+              type: StringField
+              required: false
+              description: "字段描述"
+              maxLength: 200
+              example: "格式化后的时间戳"
+              label: "描述"
+              placeholder: "字段说明"

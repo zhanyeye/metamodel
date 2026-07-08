@@ -1,0 +1,633 @@
+models:
+  # ============================================
+  # HDFS Raw 数据元模型 (HDFSRawData)
+  # ============================================
+  - modelType: "HDFSRawData"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "HDFS原始数据定义，适用于日志包等非结构化数据"
+
+    fields:
+      # 复用基础信息
+      - name: baseInfo
+        description: "基础信息"
+        $ref: "#/components/baseInfo"
+
+      # ---------- 数据分类 ----------
+      - name: dataCategory
+        type: EnumField
+        required: true
+        description: "数据分类"
+        enum:
+          - "LOG"
+          - "TEMP"
+        label: "数据分类"
+        options:
+          - "日志数据"
+          - "临时数据"
+
+      # ---------- HDFS基础路径 ----------
+      - name: basePath
+        type: StringField
+        required: true
+        label: "基础路径"
+        maxLength: 500
+
+      # ---------- 存储层定义 ----------
+      - name: storageTiers
+        type: ArrayField
+        required: true
+        minItems: 1
+        maxItems: 3
+        items:
+          $ref: "#/components/storageTier"
+        label: "存储层"
+        help: "存储层列表，至少一层。不同层可以有不同的存储策略，有不同的存储成本。存储到期后会移动到下一层，降低存储成本。最后一层存储到底后，会删除"
+
+  # ============================================
+  # Iceberg Database 元模型 (IcebergDatabase)
+  # ============================================
+  - modelType: "IcebergDatabase"
+    version: 1.0.0
+    description: "Iceberg数据库/命名空间定义"
+
+    fields:
+      # ---------- Database ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "IcebergDatabase.{name}"
+        label: "Database ID"
+        help: "格式: IcebergDatabase.{name}，自动生成"
+
+      # ---------- 数据库名称 ----------
+      - name: name
+        type: StringField
+        required: true
+        pattern: "^[a-zA-Z0-9_]+$"
+        label: "数据库名称"
+        help: "Iceberg中的数据库/命名空间名"
+        unique: true
+
+      # ---------- 数据库描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该Database用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.offline-analysis", "Feature.report-generation"]
+        label: "特性"
+        help: "选择该Database支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该Database所属的数据分层"
+
+
+  # ============================================
+  # Iceberg 表元模型 (IcebergTable)
+  # ============================================
+  - modelType: "IcebergTable"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "Iceberg表定义，归属于某个Database"
+
+    fields:
+      # ---------- 表ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "IcebergTable.{database}.{table}"
+        label: "表ID"
+        help: "格式: IcebergTable.{database}.{table}，自动生成"
+
+      # ---------- 归属的Database ----------
+      - name: database
+        type: ReferenceField
+        required: true
+        description: "归属的Database"
+        refModelAllowed: ["IcebergDatabase"]
+        label: "Database"
+
+      # ---------- 表名 ----------
+      - name: table
+        type: StringField
+        required: true
+        pattern: "^[a-zA-Z0-9_]+$"
+        label: "表名"
+        unique: true  # 在database内唯一
+
+      # ---------- 表描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该表用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: [ "Feature" ]
+        example: [ "Feature.offline-analysis", "Feature.report-generation" ]
+        label: "特性"
+        help: "选择该表支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 数据分层 ----------
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "所属的数据分层"
+        refModelAllowed: [ "DataLayer" ]
+        example: "DataLayer.DWD"
+        label: "数据分层"
+        placeholder: "如 DataLayer.DWD"
+        help: "选择该表所属的数据分层"
+
+      # ---------- 字段定义 ----------
+      - name: columns
+        type: ArrayField
+        required: true
+        description: "字段定义列表"
+        minItems: 1
+        maxItems: 1000
+        items:
+          type: ComplexType
+          fields:
+            - name: name
+              type: StringField
+              required: true
+              description: "字段名"
+              pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              example: "device_id"
+              label: "字段名"
+              placeholder: "如 device_id"
+
+            - name: type
+              type: EnumField
+              required: true
+              label: "字段类型"
+              enum:
+                - boolean
+                - int
+                - long
+                - float
+                - double
+                - decimal
+                - date
+                - time
+                - timestamp
+                - string
+                - uuid
+                - struct
+                - array
+                - map
+
+            - name: decimalPara
+              type: StringField
+              required: false
+              label: "参数"
+              help: "格式：(总位数, 小数位数)，例如(12, 2)可以记录数据 1234567890.12"
+              dependsOn: "{type}==decimal"
+
+            - name: structPara
+              type: StringField
+              required: false
+              label: "参数"
+              help: "格式：<key1: 类型1, key2: 类型2...>，例如<city: STRING, street: STRING, geo: struct<lat: double, lng: double>>"
+              dependsOn: "{type}==struct"
+
+            - name: arrayPara
+              type: StringField
+              required: false
+              label: "参数"
+              help: "格式：<类型1>"
+              dependsOn: "{type}==array"
+
+            - name: mapPara
+              type: StringField
+              required: false
+              label: "参数"
+              help: "格式：<string, int>"
+              dependsOn: "{type}==map"
+
+            - name: keyType
+              type: EnumField
+              required: false
+              label: "Key类型"
+              enum:
+                - Null
+                - PartitionKey
+                - BucketKey
+                - OrderKey
+              options:
+                - "非Key字段"
+                - "分区键"
+                - "分桶键"
+                - "排序键"
+              default: Null
+
+            - name: transform
+              type: EnumField
+              required: true
+              label: "转换方式"
+              enum:
+                - "IDENTITY"
+                - "YEAR"
+                - "MONTH"
+                - "DAY"
+                - "HOUR"
+                - "TRUNCATE"
+              options:
+                - "原值"
+                - "年"
+                - "月"
+                - "日"
+                - "小时"
+                - "截断"
+              default: "IDENTITY"
+              dependsOn: "{keyType}==PartitionKey"
+
+            - name: truncateLen
+              type: IntegerField
+              required: false
+              minimum: 1
+              maximum: 1000
+              label: "截断长度"
+              dependsOn: "{transform}==TRUNCATE"
+
+            - name: bucketCount
+              type: IntegerField
+              required: false
+              minimum: 1
+              maximum: 1000
+              label: "分桶数"
+              dependsOn: "{keyType}==BucketKey"
+
+            - name: direction
+              type: EnumField
+              required: false
+              label: "排序方向"
+              enum:
+                - "ASC"
+                - "DESC"
+              options:
+                - "升序"
+                - "降序"
+              help: "希望先查大的，就升序，否则就降序"
+              dependsOn: "{keyType}==OrderKey"
+
+            - name: nullsFirst
+              type: BooleanField
+              required: false
+              label: "是否空置排前面"
+              default: false
+              help: "需要查NULL数据就排前面，否则就排后面"
+              dependsOn: "{keyType}==OrderKey"
+
+            - name: comment
+              type: StringField
+              required: false
+              description: "字段注释"
+              maxLength: 200
+              example: "设备ID"
+              label: "注释"
+              placeholder: "字段说明"
+        label: "字段列表"
+
+      # ---------- 分布模式 ----------
+      - name: distributionMode
+        type: EnumField
+        required: false
+        label: "write.distribution-mode"
+        enum:
+          - none
+          - hash
+          - range
+        options:
+          - "不排序（不洗牌，写入速度快，容易产生大量小文件）"
+          - "按分区键排序（按分区Key洗牌）"
+          - "按排序键排序（设置了排序Key则选此项）"
+        help: "none：速度最快。不洗牌，直接写入，但容易产生大量小文件；hash：平衡模式。根据分区键洗牌再写入，能有效控制单个任务处理的分区数，避免大量小文件；range：根据分区键（或排序键） 进行范围重分布，适用于数据存在倾斜或需要预排序的场景"
+
+      # ---------- 文件大小 ----------
+      - name: targetFileSizeBytes
+        type: IntegerField
+        required: false
+        minimum: 1048576
+        maximum: 1073741824
+        label: "write.target-file-size-bytes"
+        unit: "字节"
+        help: "写入时的目标文件大小"
+
+      # ---------- parquet文件调优 ----------
+      - name: parquetConfig
+        type: ComplexType
+        required: false
+        label: "parquet文件调优"
+        fields:
+          - name: parquetRowGroupSize
+            type: IntegerField
+            required: false
+            label: "write.parquet.row-group-size-bytes"
+            unit: "字节"
+            help: "Parquet行组大小"
+
+          - name: parquetPageSize
+            type: IntegerField
+            required: false
+            label: "write.parquet.page-size-bytes"
+            unit: "字节"
+            help: "Parquet页面大小"
+
+          - name: parquetDictSize
+            type: IntegerField
+            required: false
+            label: "write.parquet.dict-size-bytes"
+            unit: "字节"
+            help: "Parquet字典编码页大小"
+
+          - name: bloomFilterCfg
+            type: ComplexType
+            required: false
+            label: "布隆过滤器"
+            fields:
+              - name: columns
+                type: ArrayField
+                required: true
+                label: "列名"
+                minItems: 1
+                items:
+                  type: StringField
+              - name: maxBytes
+                type: IntegerField
+                required: false
+                label: "布隆过滤器最大字节数"
+                unit: "字节"
+                help: "write.parquet.bloom-filter-max-bytes"
+
+      # ---------- HDFS基础路径 ----------
+      - name: basePath
+        type: StringField
+        required: true
+        label: "基础路径"
+        maxLength: 500
+
+      # ---------- 存储层定义 ----------
+      - name: storageTiers
+        type: ArrayField
+        required: true
+        description: "存储层列表，至少一层"
+        minItems: 1
+        maxItems: 3
+        items:
+          $ref: "#/components/storageTier"
+        label: "存储层"
+
+      # ---------- 快照留存 ----------
+      - name: snapshotRetention
+        type: ComplexType
+        required: false
+        description: "快照留存策略"
+        label: "快照留存"
+        fields:
+          - name: minSnapshotsToKeep
+            type: IntegerField
+            required: false
+            description: "最少快照数"
+            minimum: 1
+            default: 1
+            label: "最少快照数"
+            unit: "个"
+
+          - name: maxSnapshotAge
+            label: "快照最大时间"
+            description: "快照最大时间"
+            required: false
+            default: "7d"
+            help: "快照最大时间"
+            $ref: "duration.yaml#/components/duration"
+
+      # ---------- 元数据留存 ----------
+      - name: maxMetadataVers
+        type: IntegerField
+        required: false
+        minimum: 1
+        default: 100
+        label: "最多元数据版本数"
+
+# ============================================
+# HDFS 公共基础定义
+# ============================================
+components:
+  # ---------- 基础信息（可复用模块）----------
+  baseInfo:
+    type: ComplexType
+    fields:
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "{modelType}.{name}"
+        description: "全局唯一标识，自动生成"
+        label: "ID"
+        help: "格式: {modelType}.{name}，自动生成"
+
+      - name: name
+        type: StringField
+        required: true
+        description: "数据名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-raw-logs"
+        label: "名称"
+        placeholder: "如 bw-raw-logs"
+        help: "数据的唯一名称，用于生成ID"
+        unique: true
+
+      - name: description
+        type: StringField
+        required: false
+        description: "数据描述"
+        maxLength: 500
+        example: "网络设备带宽原始日志数据"
+        label: "描述"
+        placeholder: "请输入数据描述"
+
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该数据用于哪些特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-monitor", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该数据支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      - name: dataLayer
+        type: ReferenceField
+        required: false
+        description: "所属的数据分层"
+        refModelAllowed: ["DataLayer"]
+        example: "DataLayer.ODS"
+        label: "数据分层"
+        placeholder: "如 DataLayer.ODS"
+        help: "选择该数据所属的数据分层"
+
+  # ---------- 存储层定义 ----------
+  storageTier:
+    type: ComplexType
+    fields:
+      - name: name
+        type: EnumField
+        required: true
+        label: "层名称"
+        enum:
+          - "HOT"
+          - "WARM"
+          - "COLD"
+        options:
+          - "热存层"
+          - "温存层"
+          - "冷存层"
+
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 200
+        label: "层描述"
+
+      - name: path
+        type: StringField
+        required: true
+        label: "相对存储路径"
+        maxLength: 200
+
+      - name: storageConfig
+        required: true
+        description: "存储配置"
+        label: "存储配置"
+        $ref: "#/components/storageConfig"
+
+      - name: retention
+        label: "保留时间"
+        description: "保留时间"
+        required: true
+        default: "7d"
+        $ref: "duration.yaml#/components/duration"
+          
+  # ---------- 存储配置（策略模式）----------
+  storageConfig:
+    type: ComplexType
+    fields:
+      # 压缩算法（独立于存储策略）
+      - name: compression
+        type: EnumField
+        required: false
+        description: "压缩算法"
+        label: "压缩算法"
+        enum:
+          - "NONE"
+          - "LZ4"
+          - "SNAPPY"
+          - "ZSTD"
+          - "GZIP"
+          - "BZIP2"
+        options:
+          - "不压缩"
+          - "LZ4 - 速度快"
+          - "Snappy - 平衡"
+          - "Zstd - 压缩率高"
+          - "Gzip - 压缩率高"
+          - "Bzip2 - 压缩率最高"
+        default: "ZSTD"
+        
+      # 策略类型
+      - name: strategyType
+        type: EnumField
+        required: true
+        description: "存储策略类型"
+        enum:
+          - "REPLICATION"
+          - "EC"
+        example: "REPLICATION"
+        label: "存储策略"
+        options:
+          - "多副本"
+          - "优先纠删码"
+        help: "纠删码对节点数有要求，节点不足会自动采用多副本"
+
+      # 副本策略配置
+      - name: replicationConfig
+        type: ComplexType
+        required: false
+        description: "副本策略配置"
+        label: "副本配置"
+        fields:
+          - name: replicationFactor
+            type: IntegerField
+            required: true
+            description: "副本数"
+            minimum: 1
+            maximum: 10
+            example: 3
+            label: "副本数"
+            unit: "个"
+            help: "数据副本数量"
+        dependsOn: "{strategyType}==REPLICATION"
+
+      # EC策略配置
+      - name: ecConfig
+        type: ComplexType
+        required: false
+        label: "EC配置"
+        fields:
+          - name: ecPolicy
+            type: EnumField
+            required: true
+            label: "EC策略"
+            enum:
+              - "RS-3-2-1024k"
+              - "RS-6-3-1024k"
+              - "RS-10-4-1024k"
+            options:
+              - "RS-3-2-1024k (1.5倍存储，需≥5节点)"
+              - "RS-6-3-1024k (1.5倍存储，需≥9节点)"
+              - "RS-10-4-1024k (1.4倍存储，需≥14节点)"
+
+          - name: fallbackReplication
+            type: IntegerField
+            required: false
+            minimum: 1
+            maximum: 5
+            default: 3
+            label: "降级副本数"
+            help: "EC节点数不足时使用的副本数"
+        dependsOn: "{strategyType}==EC"

@@ -1,0 +1,106 @@
+# ============================================
+# 测试继承错误的元模型文件
+# ============================================
+models:
+  #---------- 错误1: 父模型不存在 ----------
+  - modelType: "InheritsNonExistent"
+    extends: "NonExistentParent"  # 错误1: 父模型不存在
+    version: 1.0.0
+    description: "测试继承不存在父模型"
+    
+    fields:
+      - name: name
+        type: StringField
+        required: true
+
+  #---------- 错误2: 父模型和子模型定义冲突 ----------  
+  - modelType: "ValidBaseModel"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "一个有效的父模型"
+    
+    fields:
+      - name: mandatoryField
+        type: StringField
+        required: true
+        
+      - name: name
+        type: StringField  
+        required: true
+        pattern: "^[a-zA-Z0-9_-]+$"
+        
+      - name: inputs
+        type: ArrayField
+        required: true
+
+  #---------- 错误3: 子模型覆盖父模型必填字段但改为非必填 ----------
+  - modelType: "InvalidChildModel"
+    extends: "ValidBaseModel"
+    version: 1.0.0
+    description: "子模型错误修改父模型必填字段"
+    
+    fields:
+      - name: mandatoryField  # 错误3: 将父模型的必填字段改为非必填
+        type: StringField
+        required: false
+        
+      #---------- 错误4: 子模型缺少父模型必填字段 ----------
+      # ❌ 缺失了 required: true 的 inputs 字段
+      
+      - name: additionalField
+        type: StringField
+        required: true
+
+  #---------- 错误5: 重复的字段名在不同层级 ----------
+  - modelType: "DuplicateFieldNameModel"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "测试字段名重复"
+    
+    fields:
+      - name: duplicateField
+        type: StringField
+        required: true
+        
+      - name: duplicateField  # 错误5: 与上面的字段重复
+        type: IntegerField
+        required: true
+
+  #---------- ✅ 正确的继承 ----------
+  - modelType: "CorrectInheritance"
+    extends: "ValidBaseModel"
+    version: 1.0.0
+    description: "正确的继承示例，保留所有父模型必填字段"
+    
+    fields:
+      - name: mandatoryField  # 必需：保留父模型的必填字段
+        type: StringField
+        required: true
+        
+      - name: name  # 必需：保留父模型的必填字段
+        type: StringField
+        required: true
+        pattern: "^[a-zA-Z0-9_-]+$"
+        
+      - name: inputs  # 必需：保留父模型的必填字段
+        type: ArrayField
+        required: true
+        minItems: 1
+        
+      - name: childSpecificField  # 可选：子模型添加自己的字段
+        type: StringField
+        required: false
+        example: "child-specific"
+
+#---------- 错误6-7: 组件继承错误 ----------
+components:
+  #---------- 错误6: 组件类型错误 ----------
+  invalid-component:
+    type: NonExistentType  # 错误6: 组件类型不存在
+    required: true
+    
+  #---------- 错误7: 组件属性错误 ----------
+  invalid-properties:
+    type: StringField
+    maxLength: "not-a-number"  # 错误7: 属性类型错误
+    required: true

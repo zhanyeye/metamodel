@@ -1,0 +1,125 @@
+# ============================================
+# Kafka Producer 元模型 (KafkaProducer)
+# 版本: 1.0.0
+# 描述: Kafka Producer配置，关联到具体的服务
+# ============================================
+components:
+  topicConf:
+    type: ComplexType
+    fields:
+      - name: acks
+        type: EnumField
+        required: false
+        label: "acks"
+        enum:
+          - "0"
+          - "1"
+          - "all"
+        options:
+          - "不等待确认"
+          - "leader确认"
+          - "所有副本确认"
+        default: "1"
+
+      - name: "request.timeout.ms"
+        type: IntegerField
+        required: false
+        label: "请求超时时间"
+        unit: "ms"
+        default: 30000
+
+      # ---------- 分区策略 ----------
+      - name: partitioningStrategy
+        type: ComplexType
+        required: true
+        description: "分区策略定义，决定消息如何分配到不同分区"
+        label: "分区策略"
+        fields:
+          - name: type
+            type: EnumField
+            required: true
+            description: "分区策略类型"
+            enum:
+              - STICKY
+              - ROUND_ROBIN
+              - KEY_HASH
+              - SDR_HASH
+              - murmur2_random
+              - CUSTOM
+            example: "KEY_HASH"
+            label: "策略类型"
+            options:
+              - "粘性（高吞吐）"
+              - "轮询"
+              - "Key哈希（保序）"
+              - "SDR哈希（给微服务）"
+              - "murmur2_random"
+              - "自定义"
+
+          - name: hashKey
+            type: StringField
+            required: false
+            description: "当策略为Key哈希时，指定作为分区键的字段名"
+            example: "device_id"
+            label: "分区键"
+            placeholder: "如 device_id"
+            dependsOn: "{type}==KEY_HASH"
+
+          - name: sdrHashKey
+            type: StringField
+            required: false
+            description: "当策略为sdr Key哈希时，指定作为分区键的字段名"
+            label: "分区键"
+            dependsOn: "{type}==SDR_HASH"
+
+          - name: tokenNum
+            type: IntegerField
+            required: false
+            description: "当策略为sdr Key哈希时，指定消费者token数"
+            label: "微服务消费者token数"
+            dependsOn: "{type}==SDR_HASH"
+
+          - name: customPartitionerClass
+            type: StringField
+            required: false
+            description: "当策略为自定义时，指定分区器全类名"
+            example: "com.example.BandwidthPartitioner"
+            label: "自定义分区器"
+            placeholder: "如 com.example.MyPartitioner"
+            dependsOn: "{type}==CUSTOM"
+
+          - name: businessDesc
+            type: StringField
+            required: false
+            description: "描述该分区策略的业务含义"
+            example: "按设备ID哈希，保证同一设备数据有序"
+            label: "业务描述"
+            placeholder: "说明分区策略的业务含义"
+            maxLength: 200
+
+      - name: customParameters
+        type: StringField
+        required: false
+        description: "该Topic特有的其他参数，用于调优"
+        format: multiline
+        label: "自定义参数"
+        placeholder: |
+          max.in.flight.requests.per.connection=5
+        help: "每行格式: key=value"
+        maxLength: 2000
+
+  globalConf:
+    type: ComplexField
+    fields:
+      # ---------- 自定义参数 ----------
+      - name: customParameters
+        type: StringField
+        required: false
+        description: "自定义参数"
+        format: multiline
+        example: |
+          max.in.flight.requests.per.connection=5
+          enable.idempotence=true
+        label: "自定义参数"
+        help: "每行格式: key=value，支持所有Producer参数"
+        maxLength: 5000

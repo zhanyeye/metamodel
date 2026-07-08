@@ -1,0 +1,395 @@
+# ============================================
+# Flink SQL 计算任务元模型 (FlinkSQLJob)
+# 版本: 1.0.0
+# 描述: Flink SQL任务定义，支持Kafka、StarRocks、HDFS作为输入输出
+# ============================================
+models:
+  - modelType: "FlinkSQLJob"
+    extends: "ComputeNode"
+    version: 1.0.0
+    description: "Flink SQL计算任务元模型"
+
+    fields:
+      # ---------- 任务ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "FlinkSQLJob.{name}"
+        label: "任务ID"
+        help: "格式: FlinkSQLJob.{name}，自动生成"
+
+      # ---------- 任务名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "任务名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        label: "任务名称"
+        help: "任务的唯一名称，用于生成ID"
+        unique: true
+
+      # ---------- 任务描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        maxLength: 500
+        label: "描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        items:
+          type: ReferenceField
+          refModelAllowed: [ "Feature" ]
+        label: "特性"
+        minItems: 0
+        maxItems: 20
+
+      # ========== 输入定义 ==========
+      - name: inputs
+        $ref: "#/components/inputs"
+
+      # ========== 输出定义 ==========
+      - name: outputs
+        $ref: "#/components/outputs"
+
+      # ========== 维表定义 ==========
+      - name: dimensionTables
+        $ref: "#/components/dimensionTables"
+
+      # ========== SQL定义 ==========
+      - name: sql
+        $ref: "#/components/sql"
+
+      # ========== 资源规格 ==========
+      - name: resources
+        $ref: "#/components/resources"
+
+      # ========== 状态后端配置 ==========
+      - name: stateBackend
+        $ref: "#/components/stateBackend"
+
+      # ========== Checkpoint配置 ==========
+      - name: checkpoint
+        $ref: "#/components/checkpoint"
+
+      # ========== flink自定义参数 ==========
+      - name: customParameters
+        $ref: "#/components/customParameters"
+
+      # ========== Kafka Consumer自定义参数 ==========
+      - name: kafkaConsumerConf
+        required: false
+        label: "Kafka Consumer全局配置"
+        $ref: "kafka_consumer.yaml#/components/globalConf"
+
+      # ========== Kafka Producer自定义参数 ==========
+      - name: kafkaProducerConf
+        required: false
+        label: "Kafka Producer全局配置"
+        $ref: "kafka_producer.yaml#/components/globalConf"
+
+components:
+  inputs:
+    type: ArrayField
+    required: true
+    minItems: 1
+    maxItems: 50
+    description: "输入数据源列表"
+    label: "输入"
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          label: "别名"
+          help: "输入别名，用于SQL中引用"
+          maxLength: 100
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          label: "数据源ID"
+          refModelAllowed: [ "KafkaTopic", "StarRocksTable" ]
+          help: "引用已定义的数据源"
+
+        - name: conf
+          required: false
+          label: "topic consumer配置"
+          $ref: "kafka_consumer.yaml#/components/topicConf"
+
+  outputs:
+    type: ArrayField
+    required: true
+    minItems: 1
+    maxItems: 20
+    description: "输出目标列表"
+    label: "输出"
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          label: "别名"
+          maxLength: 100
+          help: "输出别名，用于SQL中引用"
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          label: "数据源ID"
+          refModelAllowed: [ "KafkaTopic", "HDFSRawData", "IcebergTable", "StarRocksTable" ]
+          help: "引用已定义的数据源"
+
+        - name: conf
+          required: false
+          label: "topic producer配置"
+          $ref: "kafka_producer.yaml#/components/topicConf"
+
+  sql:
+    type: ComplexType
+    required: true
+    description: "SQL计算逻辑"
+    label: "SQL"
+    fields:
+      - name: content
+        type: StringField
+        required: true
+        format: multiline
+        label: "SQL内容"
+        help: "完整的SQL逻辑，包括INSERT、CREATE VIEW等"
+        maxLength: 50000
+        script:"scripts/calc_sql.py"
+
+  dimensionTables:
+    type: ArrayField
+    required: false
+    description: "维表列表（用于Lookup Join）"
+    label: "维表"
+    minItems: 0
+    maxItems: 20
+    items:
+      type: ComplexType
+      fields:
+        - name: name
+          type: StringField
+          required: true
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          label: "别名"
+          maxLength: 100
+          help: "维表别名，用于SQL中引用"
+
+        - name: refId
+          type: ReferenceField
+          required: true
+          label: "维表ID"
+          refModelAllowed: [ "StarRocksTable" ]
+          help: "引用已定义的维表ID"
+
+        - name: lookupOptions
+          type: StringField
+          required: false
+          format: multiline
+          label: "查询选项"
+          help: "维表查询的缓存等配置"
+          maxLength: 2000
+
+        - name: broadcast
+          type: BooleanField
+          required: false
+          default: false
+          label: "广播维表"
+          help: "是否广播小维表优化性能"
+
+  udfs:
+    type: ArrayField
+    required: false
+    description: "用户自定义函数"
+    label: "FlinkUDF"
+    minItems: 0
+    maxItems: 50
+    items:
+      type: ReferenceField
+      refModelAllowed: [ "FlinkUDF" ]
+
+  resources:
+    type: ComplexType
+    required: true
+    description: "资源规格配置"
+    label: "资源规格"
+    fields:
+      - name: parallelism
+        type: IntegerField
+        required: true
+        minimum: 1
+        maximum: 10000
+        default: 10
+        label: "并行度"
+        unit: "个"
+        help: "作业整体并行度"
+
+      - name: jobManager
+        type: ComplexType
+        required: true
+        label: "JobManager"
+        fields:
+          - name: memoryMB
+            type: IntegerField
+            required: true
+            minimum: 512
+            maximum: 32768
+            default: 1024
+            label: "内存"
+            unit: "MB"
+
+          - name: cpuCores
+            type: NumberField
+            required: false
+            minimum: 0.1
+            maximum: 10
+            default: 2
+            label: "CPU核数"
+
+      - name: taskManager
+        type: ComplexType
+        required: true
+        label: "TaskManager"
+        fields:
+          - name: count
+            type: IntegerField
+            required: true
+            minimum: 1
+            maximum: 1000
+            default: 1
+            label: "数量"
+
+          - name: memoryMB
+            type: IntegerField
+            required: true
+            minimum: 512
+            maximum: 65536
+            default: 2048
+            label: "内存"
+            unit: "MB"
+
+          - name: cpuCores
+            type: NumberField
+            required: false
+            minimum: 0.1
+            maximum: 32
+            default: 2
+            label: "CPU核数"
+
+  stateBackend:
+    type: ComplexType
+    required: false
+    label: "状态后端"
+    fields:
+      - name: type
+        type: EnumField
+        required: true
+        enum:
+          - "ROCKSDB"
+          - "HASHMAP"
+        default: "ROCKSDB"
+        label: "类型"
+        options:
+          - "RocksDB（适合大状态）"
+          - "HashMap（适合小状态）"
+        help: "选择状态后端类型"
+
+      - name: incremental
+        type: BooleanField
+        required: false
+        default: true
+        label: "开启增量Checkpoint"
+        help: "开启后只存储变更的SST文件"
+        dependsOn: "{type}==ROCKSDB"
+
+      - name: options
+        type: StringField
+        required: false
+        format: multiline
+        label: "RocksDB参数"
+        help: "一行一个 key: value"
+        maxLength: 5000
+        dependsOn: "{type}==ROCKSDB"
+
+  checkpoint:
+    type: ComplexType
+    required: false
+    description: "Checkpoint配置"
+    label: "Checkpoint"
+    fields:
+      - name: interval
+        label: "间隔"
+        required: true
+        default: "300s"
+        help: "spark.sql.broadcastTimeout"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: timeout
+        label: "超时时间"
+        description: "超时时间"
+        required: false
+        default: "10m"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: minPause
+        label: "最小间隔"
+        description: "最小间隔"
+        required: false
+        default: "1m"
+        help: "两个Checkpoint之间的最小间隔"
+        $ref: "duration.yaml#/components/duration"
+
+      - name: maxConcurrent
+        type: IntegerField
+        required: false
+        default: 1
+        minimum: 1
+        maximum: 10
+        example: 1
+        label: "最大并发数"
+        unit: "个"
+
+      - name: mode
+        type: EnumField
+        required: false
+        description: "一致性模式"
+        enum:
+          - "EXACTLY_ONCE"
+          - "AT_LEAST_ONCE"
+        default: "EXACTLY_ONCE"
+        label: "一致性模式"
+        options:
+          - "精确一次"
+          - "至少一次"
+
+      - name: retain
+        type: EnumField
+        required: false
+        enum:
+          - "ON_CANCEL"
+          - "ON_FAILURE"
+          - "NONE"
+        default: "ON_CANCEL"
+        label: "保留策略"
+        options:
+          - "取消时保留"
+          - "失败时保留"
+          - "不保留"
+
+  customParameters:
+    type: StringField
+    required: false
+    format: multiline
+    label: "自定义参数"
+    help: "一行一个 key=value，支持所有Flink官方参数"
+    maxLength: 10000

@@ -1,0 +1,118 @@
+# ============================================
+# Kafka Topic 元模型 (KafkaTopic)
+# 版本: 1.0.0
+# 描述: Kafka Topic配置元模型
+# ============================================
+models:
+  - modelType: "KafkaTopic"
+    extends: "DataNode"
+    version: 1.0.0
+    description: "Kafka Topic配置元模型"
+
+    fields:
+      # ---------- Topic ID（自动生成）----------
+      - name: id
+        type: IdField
+        required: true
+        generated: true
+        template: "KafkaTopic.{name}"
+        description: "全局唯一标识，自动生成"
+        label: "Topic ID"
+        help: "格式: KafkaTopic.{name}，自动生成"
+
+      # ---------- Topic名称（唯一标识）----------
+      - name: name
+        type: StringField
+        required: true
+        description: "Kafka集群中实际的Topic名称，全局唯一"
+        pattern: "^[a-zA-Z0-9_-]+$"
+        example: "bw-raw"
+        label: "Topic名称"
+        placeholder: "如 bw-raw"
+        help: "Kafka中实际注册的Topic名，建议用连字符"
+        unique: true
+
+      # ---------- Topic描述 ----------
+      - name: description
+        type: StringField
+        required: false
+        description: "Topic的业务描述"
+        maxLength: 500
+        example: "带宽原始数据流"
+        label: "描述"
+        placeholder: "请输入Topic的业务描述"
+
+      # ---------- 业务特性 ----------
+      - name: features
+        type: ArrayField
+        required: false
+        description: "该Topic支持的业务特性"
+        items:
+          type: ReferenceField
+          refModelAllowed: ["Feature"]
+        example: ["Feature.realtime-monitor", "Feature.offline-analysis"]
+        label: "特性"
+        help: "选择该Topic支持的业务特性"
+        minItems: 0
+        maxItems: 20
+
+      # ---------- 消息Schema ----------
+      - name: schemaId
+        type: ReferenceField
+        required: true
+        description: "消息Schema ID"
+        refModelAllowed: [ "Message" ]
+        example: "Message.bandwidth-measurement"
+        label: "消息Schema"
+        placeholder: "如 Message.bandwidth-measurement"
+        help: "选择该Topic使用的消息Schema。一个Kafka Topic只会承载一种消息"
+
+      # ---------- 分区数 ----------
+      - name: partitions
+        type: IntegerField
+        required: true
+        minimum: 1
+        maximum: 10000
+        label: "分区数"
+
+      # ---------- 副本因子 ----------
+      - name: replicationFactor
+        type: IntegerField
+        required: false
+        minimum: 1
+        maximum: 3
+        default: 2
+        label: "副本数"
+
+      # ---------- 留存策略 ----------
+      - name: retention
+        type: ComplexType
+        required: true
+        description: "消息留存策略配置"
+        label: "留存策略"
+        fields:
+          - name: ms
+            type: IntegerField
+            required: true
+            minimum: 0
+            label: "留存时长"
+            unit: "毫秒"
+
+          - name: bytes
+            type: IntegerField
+            required: false
+            description: "留存大小（字节），-1表示不限制"
+            minimum: -1
+            default: -1
+            label: "留存大小"
+            unit: "字节"
+
+      # ---------- 自定义参数 ----------
+      - name: customParameters
+        type: StringField
+        required: false
+        description: "自定义参数"
+        format: multiline
+        label: "自定义参数"
+        help: "每行格式: key=value，如 min.insync.replicas=2"
+        maxLength: 5000
