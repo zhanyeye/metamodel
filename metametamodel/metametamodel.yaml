@@ -53,6 +53,11 @@ metaMetaTypes:
         default: false
         description: "是否自动生成"
 
+      - name: buttonName
+        type: string
+        required: false
+        description: "按钮名称"
+
   # ========== 字符串类型 ==========
   - fieldType: "StringField"
     extends: "Field"
