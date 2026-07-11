@@ -153,7 +153,7 @@ components:
         help: "完整的SQL逻辑，包括INSERT、CREATE VIEW等"
         maxLength: 50000
         buttonName: "把输入字段刷新到sql中"
-        script:"scripts/calc_sql.py"
+        script: "scripts/calc_sql.py"
 
   dimensionTables:
     type: ArrayField

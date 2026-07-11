@@ -165,7 +165,7 @@ components:
         label: "SQL内容"
         help: "完整的SQL逻辑，包括INSERT、CREATE VIEW等"
         maxLength: 50000
-        script:"scripts/calc_sql.py"
+        script: "scripts/calc_sql.py"
 
   dimensionTables:
     type: ArrayField
