@@ -18,6 +18,8 @@ models:
         template: "SparkSQLJob.{name}"
         label: "任务ID"
         help: "格式: SparkSQLJob.{name}，自动生成"
+        buttonName: "把输入字段刷新到sql中"
+        script: "scripts/calc_sql.py"
 
       # ---------- 任务名称（唯一标识）----------
       - name: name
@@ -162,8 +164,12 @@ components:
     label: "维表"
     minItems: 0
     maxItems: 20
+    buttonName: "把输入字段刷新到sql中"
+    script: "scripts/calc_sql.py"
     items:
       type: ComplexType
+      buttonName: "把输入字段刷新到sql中"
+      script: "scripts/calc_sql.py"
       fields:
         - name: name
           type: StringField
